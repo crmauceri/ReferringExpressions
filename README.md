@@ -1,15 +1,15 @@
 # ObjectRef
 
 1. [Data](#data)
-1.1 [Data splits](#datasplit)
-1.2 [Data preprocessing](#datapre)
-2. [Modules](#module)
-3. [Classifiers](#classifier)
-3.1 [Training Arguments](#training)
-4. [Analysis and Visualizations](#analysis)
+    1.1 [Data splits](#data-splits)
+    1.2 [Data preprocessing](#data-preprocessing)
+2. [Modules](#modules)
+3. [Classifiers](#classifiers)
+    3.1 [Training Arguments](#training-arguments)
+4. [Analysis and Visualizations](#analysis-and-visualization)
 
-## Data {#data}
-### Data Splits {#datasplit}
+## Data
+### Data Splits
 
 `Stratifier` will split the images into a training and test set. It builds a binary tree which splits on the most frequent class label at each level. It terminates the branching when there are five or less images on a branch. It then randomly splits each leaf into training and test examples by a given percentage.
 
@@ -21,7 +21,7 @@ Example Call
 
     python3 code/Stratifier.py <answer_file.json> <label_file.txt> <save_filepath>
 
-### Data Preprocessing {#datapre}
+### Data Preprocessing
 
 `DataLoader` will preprocess data in correctly formatted JSON files to be compatible with the classifiers
 
@@ -45,19 +45,19 @@ The lists must have the same order.
 If you have a parse tree instead of part of speech tags, additional options on DataLoader will extract the part of speech tags from the parse tree. One additional field is required for the queries_file, ‘tree_idx’ which references the position of the corresponding parse tree in the tree_file
 
 
-## Modules {#module}
+## Modules
 
 1. `TruncatedImageNetworks` : torch.vision networks with the fully connected layers removed
 2. `AttentionModule` : attention mechanism described in Z. Yang, X. He, J. Gao et al. "Stacked Attention Networks for Image Question Answering”. CVPR 2015.
 3. `ClassifierHelper.Classifier` : classifiers inherit from this class; it provides training and test protocol.
 
-## Classifiers {#classifier}
+## Classifiers
 
 1. `SimpleClassifier_with_Tokens`: Classify missing words with LSTM.
 2. `SimpleClassifier_with_Image`: Classify missing words with concatenated LSTM and VGG16 features.
 3. `StackedAttentionNetwork.SAN`: Stacked attention network as described in Z. Yang, X. He, J. Gao et al. "Stacked Attention Networks for Image Question Answering”. CVPR 2015.
 
-### Training Arguments {#training}
+### Training Arguments
 
 positional arguments| def
 --- | ---
@@ -77,7 +77,7 @@ Notes:
 - Does backprop on one example at a time, no mini-batching
 - Record the options used for hidden_dim, use_tokens, and tag_dim. They are needed to load a saved model or analyze the results. 
 
-## Analysis and Visualizations {#analysis}
+## Analysis and Visualizations
 
 `VisualizeResults` will generate three files
 
