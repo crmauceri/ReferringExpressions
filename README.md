@@ -1,11 +1,11 @@
 # ObjectRef
 
 1. [Data](#data)
-    1.1 [Data splits](#data-splits)
-    1.2 [Data preprocessing](#data-preprocessing)
+    1. [Data splits](#data-splits)
+    1. [Data preprocessing](#data-preprocessing)
 2. [Modules](#modules)
 3. [Classifiers](#classifiers)
-    3.1 [Training Arguments](#training-arguments)
+    3. [Training Arguments](#training-arguments)
 4. [Analysis and Visualizations](#analysis-and-visualization)
 
 ## Data
