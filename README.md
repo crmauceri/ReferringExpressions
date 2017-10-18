@@ -5,7 +5,7 @@
     1. [Data preprocessing](#data-preprocessing)
 2. [Modules](#modules)
 3. [Classifiers](#classifiers)
-    3. [Training Arguments](#training-arguments)
+    1. [Training Arguments](#training-arguments)
 4. [Analysis and Visualizations](#analysis-and-visualization)
 
 ## Data
