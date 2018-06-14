@@ -25,9 +25,17 @@ class Classifier(nn.Module):
         self.start_epoch = checkpoint['epoch']
         self.total_loss = checkpoint['total_loss']
         self.load_state_dict(checkpoint['state_dict'])
+        self.load_params(checkpoint)
 
         print("=> loaded checkpoint '{}' (epoch {})"
               .format(checkpt_file, checkpoint['epoch']))
+
+    def load_params(self, checkpoint):
+        pass
+
+    def save_model(self, checkpt_file, params):
+        print("=> saving checkpoint '{}'".format(checkpt_file))
+        torch.save(params, checkpt_file)
 
     def train(self, n_epochs, instances, checkpt_file, parameters=None, debug=False):
         loss_function = nn.NLLLoss()
@@ -64,19 +72,19 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.data[0]
 
-            torch.save({
+            self.save_model(checkpt_file, {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
-                'total_loss': self.total_loss,
-            }, checkpt_file)
+                'total_loss': self.total_loss})
 
         return self.total_loss
 
     def make_prediction(self, instances, parameters):
         predictions = []
-        for i in tqdm(range(len(instances))):
-            instance = instances[i]
-            tag_scores = self(instance, parameters)
-            val, index = tag_scores.data.max(0)
-            predictions.append((index[0], val[0]))
+        with torch.no_grad():
+            for i in tqdm(range(len(instances))):
+                instance = instances[i]
+                tag_scores = self(instance, parameters)
+                val, index = tag_scores.data.max(0)
+                predictions.append((index[0], val[0]))
         return predictions
