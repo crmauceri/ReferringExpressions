@@ -56,21 +56,21 @@ class Classifier(nn.Module):
             for j in tqdm(indices, desc='{}rd epoch'.format(epoch)):
 
                 instance = instances[j]
-                if not hasattr(instance, 'inputs'):
-                    continue
 
-                self.zero_grad()
+                self.clear_gradients()
+
                 label_scores = self(instance, parameters)
+                targets = self.targets(instance)
 
                 if self.use_cuda:
-                    loss = loss_function(label_scores.cuda(), instance.targets.cuda())
+                    loss = loss_function(label_scores.cuda(), targets.cuda())
                 else:
-                    loss = loss_function(label_scores, instance.targets)
+                    loss = loss_function(label_scores, targets)
 
                 loss.backward()
                 optimizer.step()
 
-                self.total_loss[epoch] += loss.data[0]
+                self.total_loss[epoch] += loss.item()
 
             self.save_model(checkpt_file, {
                 'epoch': epoch + 1,
@@ -78,6 +78,12 @@ class Classifier(nn.Module):
                 'total_loss': self.total_loss})
 
         return self.total_loss
+
+    def targets(self, instance):
+        pass
+
+    def clear_gradients(self):
+        self.zero_grad()
 
     def make_prediction(self, instances, parameters):
         predictions = []
