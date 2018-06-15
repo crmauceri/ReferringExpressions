@@ -1,4 +1,4 @@
-import os.path, argparse, re
+import os.path, argparse, re, sys
 
 import torch
 import torch.autograd as autograd
@@ -15,22 +15,28 @@ from pyutils.refer_python3.refer import REFER
 #Network Definition
 class LanguageModel(Classifier):
 
-    def __init__(self, checkpt_file=None, word_embedding=None, hidden_dim=None, use_cuda=False):
+    def __init__(self, checkpt_file=None, word_embedding=None, hidden_dim=None, dropout=0,
+            use_cuda=False, additional_feat=0):
         super(LanguageModel, self).__init__(use_cuda)
 
         if checkpt_file is not None:
-            m = re.match('hidden(?P<hidden>\d+)_vocab(?P<vocab>\d+)_embed(?P<embed>\d+)', checkpt_file)
+            m = re.match('hidden(?P<hidden>\d+)_vocab(?P<vocab>\d+)_embed(?P<embed>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
             self.hidden_dim = m.group('hidden')
             vocab_dim = m.group('vocab')
             embed_dim = m.group('embed')
+            self.feats_dim = m.group('feats')
+            self.dropout_p = m.group('dropout')
         else:
             self.hidden_dim = hidden_dim
+            self.dropout_p = dropout
             self.word_embeddings = word_embedding
             vocab_dim = self.word_embeddings.n_vocab
             embed_dim = self.word_embeddings.dim
+            self.feats_dim = additional_feat
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
-        self.lstm = nn.LSTM(embed_dim, self.hidden_dim)
+        self.dropout = nn.Dropout(1 - self.dropout_p)
+        self.lstm = nn.LSTM(embed_dim + self.feats_dim, self.hidden_dim)
         self.hidden2vocab = nn.Linear(self.hidden_dim, vocab_dim)
         self.hidden = self.init_hidden()
 
@@ -50,18 +56,34 @@ class LanguageModel(Classifier):
 
     def save_model(self, checkpt_file, params):
         params['word_embeddings'] = self.word_embeddings
-        checkpt_file = '{}_hidden{}_vocab{}_embed{}.mdl'.format(checkpt_file, self.hidden_dim,
-                                                                self.word_embeddings.n_vocab, self.word_embeddings.dim)
+        checkpt_file = '{}_hidden{}_vocab{}_embed{}_feats{}_dropout{}.mdl'.format(checkpt_file, self.hidden_dim,
+                                                                self.word_embeddings.n_vocab, self.word_embeddings.dim,
+                                                                self.feats_dim, self.dropout_p)
         super(LanguageModel, self).save_model(checkpt_file, params)
 
-    def forward(self, ref, parameters):
-        sentence = torch.LongTensor(ref['vocab'][:-1])
+    def forward(self, ref=None, word_idx=None, parameters={'feats':[]}):
+
+        if ref is not None:
+            sentence = torch.LongTensor(ref['vocab'][:-1])
+        elif word_idx is not None:
+            sentence = torch.LongTensor([word_idx])
+        else:
+            raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
 
         if self.use_cuda:
             sentence = sentence.cuda()
+        embeds = self.dropout(self.word_embeddings.embeddings(sentence))
+        n, m = embeds.size()
 
-        embeds = self.word_embeddings.embeddings(sentence)
-        lstm_out, self.hidden = self.lstm(embeds.view(len(sentence), 1, -1), self.hidden)
+        if len(parameters['feats']) > 0:
+            feats = torch.FloatTensor(parameters['feats']).repeat(n, 1)
+
+            #Concatenate text embedding and additional features
+            embeds = torch.cat([embeds, feats], 1)
+
+        lstm_out, self.hidden = self.lstm(embeds.view(n, 1, -1), self.hidden)
+
+        lstm_out = self.dropout(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out.view(len(sentence), -1))
         vocab_scores = F.log_softmax(vocab_space, dim=1)
         return vocab_scores
@@ -75,6 +97,21 @@ class LanguageModel(Classifier):
 
     def train(self, n_epochs, instances, checkpt_file):
         return super(LanguageModel, self).train(n_epochs, instances, checkpt_file)
+
+    def generate(self, feats):
+        sentence = []
+        word_idx = self.word_embeddings.word2idx['<bos>']
+        end_idx = self.word_embeddings.word2idx['<eos>']
+
+        with torch.no_grad():
+            self.init_hidden()
+
+            while word_idx != end_idx and len(sentence) < 100:
+                output = self(word_idx=word_idx, parameters={'feats':feats})
+                word_idx = torch.argmax(output)
+                sentence.append(self.word_embeddings.ind2word[word_idx])
+
+        return sentence
 
 
 
@@ -93,7 +130,7 @@ if __name__ == "__main__":
                         help='Location of trained word embeddings')
     parser.add_argument('--epochs', dest='epochs', type=int, default=1,
                         help='Number of epochs to train (Default: 1)')
-    parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=100,
+    parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
 
     args = parser.parse_args()
@@ -108,7 +145,7 @@ if __name__ == "__main__":
         vocab = find_vocab(refer)
         #Add the start and end tokens
         vocab.extend(['<bos>', '<eos>', '<unk>'])
-        word_embedding = WordEmbedding(index=dict(zip(vocab, range(len(vocab)))), dim=200)
+        word_embedding = WordEmbedding(vocab=vocab, dim=1024)
 
     word_embedding.sent2vocab(refer)
 
@@ -119,8 +156,8 @@ if __name__ == "__main__":
 
     if(args.mode == 'train'):
         print("Start Training")
-        total_loss = model.train(args.epochs, refer.loadSents(refer.getRefIds(split='train')), args.checkpoint_file)
+        total_loss = model.train(args.epochs, refer.loadSents(refer.getRefIds(split='train'))[:100], args.checkpoint_file)
 
     if(args.mode == 'test'):
         print("Start Testing")
-        model.test(refer.loadRefs(refer.getRefIds(split='test')))
+        print(model.generate([]))

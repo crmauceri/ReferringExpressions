@@ -2,7 +2,7 @@ from torch import FloatTensor, Size
 from torch.nn import Embedding
 
 class WordEmbedding():
-    def __init__(self, text_file=None, index=None, dim=None):
+    def __init__(self, text_file=None, vocab=None, dim=None):
         if text_file is not None:
             with open(text_file, 'r') as f:
                 self.n_vocab, self.dim = [int(s) for s in f.readline().split()]
@@ -17,21 +17,22 @@ class WordEmbedding():
                         self.index[line_delim[0]] = i
 
         else:
-            self.n_vocab = len(index)
+            self.n_vocab = len(vocab)
             self.dim = dim
             self.embeddings = Embedding(self.n_vocab, self.dim)
-            self.index = index
+            self.word2idx = dict(zip(vocab, range(len(vocab))))
+            self.ind2word = vocab
 
     def sent2vocab(self, refer):
-        begin_index = self.index['<bos>']
-        end_index = self.index['<eos>']
-        unk_index = self.index['<unk>']
+        begin_index = self.word2idx['<bos>']
+        end_index = self.word2idx['<eos>']
+        unk_index = self.word2idx['<unk>']
 
         for sentence in refer.Sents.values():
             sentence['vocab'] = [begin_index]
             for token in sentence['tokens']:
-                if token in self.index:
-                    sentence['vocab'].append(self.index[token])
+                if token in self.word2idx:
+                    sentence['vocab'].append(self.word2idx[token])
                 else:
                     sentence['vocab'].append(unk_index)
             sentence['vocab'].append(end_index)
