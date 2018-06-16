@@ -25,7 +25,7 @@ class WordEmbedding():
 
         self.use_cuda = use_cuda
         if self.use_cuda:
-            self.cuda()
+            self.embeddings.cuda()
 
     def sent2vocab(self, refer):
         begin_index = self.word2idx['<bos>']
