@@ -10,7 +10,7 @@ torch.manual_seed(1)
 from ClassifierHelper import Classifier
 from WordEmbedding import WordEmbedding, find_vocab
 
-from pyutils.refer_python3.refer import REFER
+from refer_python3.refer import REFER
 
 #Network Definition
 class LanguageModel(Classifier):
