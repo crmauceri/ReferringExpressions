@@ -140,12 +140,12 @@ if __name__ == "__main__":
     refer = REFER(args.data_root, args.dataset, args.splitBy)
 
     if args.word_embedding_file is not None:
-        word_embedding = WordEmbedding(word_embedding=args.word_embedding_file)
+        word_embedding = WordEmbedding(word_embedding=args.word_embedding_file, use_cuda=use_cuda)
     else:
         vocab = find_vocab(refer)
         #Add the start and end tokens
         vocab.extend(['<bos>', '<eos>', '<unk>'])
-        word_embedding = WordEmbedding(vocab=vocab, dim=1024)
+        word_embedding = WordEmbedding(vocab=vocab, dim=1024, use_cuda=use_cuda)
 
     word_embedding.sent2vocab(refer)
 

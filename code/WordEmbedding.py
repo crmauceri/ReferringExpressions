@@ -2,7 +2,7 @@ from torch import FloatTensor, Size
 from torch.nn import Embedding
 
 class WordEmbedding():
-    def __init__(self, text_file=None, vocab=None, dim=None):
+    def __init__(self, text_file=None, vocab=None, dim=None, use_cuda=False):
         if text_file is not None:
             with open(text_file, 'r') as f:
                 self.n_vocab, self.dim = [int(s) for s in f.readline().split()]
@@ -22,6 +22,10 @@ class WordEmbedding():
             self.embeddings = Embedding(self.n_vocab, self.dim)
             self.word2idx = dict(zip(vocab, range(len(vocab))))
             self.ind2word = vocab
+
+        self.use_cuda = use_cuda
+        if self.use_cuda:
+            self.cuda()
 
     def sent2vocab(self, refer):
         begin_index = self.word2idx['<bos>']

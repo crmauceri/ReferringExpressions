@@ -10,7 +10,17 @@
 
 ## Install
 
-`pip -e pyutils/`
+1. Clone recursive 
+```git clone --recurse-submodules https://github.com/crmauceri/ReferExpGeneration.git```
+2. Make mask extention
+```cd pyutils/refer_python3
+make
+pip install -e .
+```
+3. Install pyutils 
+```cd ../..
+pip install -e pyutils/
+```
 
 ## Data
 
