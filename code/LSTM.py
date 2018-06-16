@@ -48,8 +48,12 @@ class LanguageModel(Classifier):
 
     def init_hidden(self):
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim)),
-                autograd.Variable(torch.zeros(1, 1, self.hidden_dim)))
+        if self.use_cuda:
+		return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda()),
+			autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda()))
+	else:
+		return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim)),
+                	autograd.Variable(torch.zeros(1, 1, self.hidden_dim)))
 
     def load_params(self, checkpoint):
         self.word_embeddings = checkpoint['word_embeddings']
@@ -73,7 +77,7 @@ class LanguageModel(Classifier):
         if self.use_cuda:
             sentence = sentence.cuda()
 
-        sentence = torch.Variable(sentence)
+        sentence = autograd.Variable(sentence)
         embeds = self.word_embeddings.embeddings(sentence)
         embeds = self.dropout(embeds)
         n, m = embeds.size()
