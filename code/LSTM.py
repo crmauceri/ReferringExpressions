@@ -132,6 +132,7 @@ if __name__ == "__main__":
                         help='Number of epochs to train (Default: 1)')
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
+    parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
 
     args = parser.parse_args()
 
@@ -152,7 +153,8 @@ if __name__ == "__main__":
     if (os.path.isfile(args.checkpoint_file)):
         model = LanguageModel(checkpt_file=args.checkpoint_file, use_cuda=use_cuda)
     else:
-        model = LanguageModel(word_embedding=word_embedding, hidden_dim=args.hidden_dim, use_cuda=use_cuda)
+        model = LanguageModel(word_embedding=word_embedding, hidden_dim=args.hidden_dim,
+                              use_cuda=use_cuda, dropout=args.dropout)
 
     if(args.mode == 'train'):
         print("Start Training")
