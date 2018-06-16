@@ -77,6 +77,8 @@ class Classifier(nn.Module):
                 'state_dict': self.state_dict(),
                 'total_loss': self.total_loss})
 
+            print('Average loss:{}'.format(self.total_loss[epoch]/float(len(instances))))
+
         return self.total_loss
 
     def targets(self, instance):
