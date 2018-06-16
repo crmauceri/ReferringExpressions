@@ -72,7 +72,10 @@ class LanguageModel(Classifier):
 
         if self.use_cuda:
             sentence = sentence.cuda()
-        embeds = self.dropout(self.word_embeddings.embeddings(sentence))
+
+        sentence = torch.Variable(sentence)
+        embeds = self.word_embeddings.embeddings(sentence)
+        embeds = self.dropout(embeds)
         n, m = embeds.size()
 
         if len(parameters['feats']) > 0:
