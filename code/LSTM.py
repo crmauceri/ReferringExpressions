@@ -35,8 +35,8 @@ class LanguageModel(Classifier):
             self.feats_dim = additional_feat
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
-        self.dropout = nn.Dropout(1 - self.dropout_p)
-        self.lstm = nn.LSTM(embed_dim + self.feats_dim, self.hidden_dim)
+        self.dropout = nn.Dropout(p=self.dropout_p)
+        self.lstm = nn.LSTM(embed_dim + self.feats_dim, self.hidden_dim, dropout=self.dropout_p)
         self.hidden2vocab = nn.Linear(self.hidden_dim, vocab_dim)
         self.hidden = self.init_hidden()
 
@@ -82,8 +82,6 @@ class LanguageModel(Classifier):
             embeds = torch.cat([embeds, feats], 1)
 
         lstm_out, self.hidden = self.lstm(embeds.view(n, 1, -1), self.hidden)
-
-        lstm_out = self.dropout(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out.view(len(sentence), -1))
         vocab_scores = F.log_softmax(vocab_space, dim=1)
         return vocab_scores
