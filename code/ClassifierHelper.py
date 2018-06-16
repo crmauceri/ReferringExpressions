@@ -39,6 +39,9 @@ class Classifier(nn.Module):
 
     def train(self, n_epochs, instances, checkpt_file, parameters=None, debug=False):
         loss_function = nn.NLLLoss()
+        if self.use_cuda:
+            loss_function = loss_function.cuda()
+
         optimizer = optim.SGD(self.parameters(), lr=0.1)
 
         if os.path.exists(checkpt_file) and os.path.isfile(checkpt_file):
