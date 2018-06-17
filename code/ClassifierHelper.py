@@ -39,8 +39,6 @@ class Classifier(nn.Module):
 
     def train(self, n_epochs, instances, checkpt_file, parameters=None, debug=False):
         loss_function = nn.NLLLoss()
-        if self.use_cuda:
-            loss_function = loss_function.cuda()
 
         optimizer = optim.SGD(self.parameters(), lr=0.1)
 
@@ -63,12 +61,9 @@ class Classifier(nn.Module):
                 self.clear_gradients()
 
                 label_scores = self(instance, parameters)
-                targets = autograd.Variable(self.targets(instance))
+                targets = self.targets(instance)
 
-                if self.use_cuda:
-                    loss = loss_function(label_scores, targets.cuda())
-                else:
-                    loss = loss_function(label_scores, targets)
+                loss = loss_function(label_scores, targets)
 
                 loss.backward()
                 optimizer.step()

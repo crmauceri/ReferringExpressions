@@ -1,31 +1,21 @@
-from torch import FloatTensor, LongTensor, Size
+from torch import LongTensor, Size, device
 from torch.nn import Embedding
 
 class WordEmbedding():
-    def __init__(self, text_file=None, vocab=None, dim=None, use_cuda=False):
-        if text_file is not None:
-            with open(text_file, 'r') as f:
-                self.n_vocab, self.dim = [int(s) for s in f.readline().split()]
-                self.embeddings = Embedding(self.n_vocab, self.dim)
-                self.index = {}
-                for i in range(self.n_vocab):
-                    line_delim = f.readline().split()
-                    embed = FloatTensor([float(s) for s in line_delim[1:]])
-
-                    if(embed.size() == Size([self.dim])):
-                        self.embeddings.weight[i, :] = embed
-                        self.index[line_delim[0]] = i
-
-        else:
-            self.n_vocab = len(vocab)
-            self.dim = dim
-            self.embeddings = Embedding(self.n_vocab, self.dim)
-            self.word2idx = dict(zip(vocab, range(len(vocab))))
-            self.ind2word = vocab
+    def __init__(self, vocab=None, dim=None, use_cuda=False):
+        self.n_vocab = len(vocab)
+        self.dim = dim
+        self.embeddings = Embedding(self.n_vocab, self.dim)
+        self.word2idx = dict(zip(vocab, range(len(vocab))))
+        self.ind2word = vocab
 
         self.use_cuda = use_cuda
-        if self.use_cuda:
-            self.embeddings.cuda()
+        if use_cuda:
+            self.device = device('cuda')
+        else:
+            self.device = device('cpu')
+        self.embeddings.to(self.device)
+
 
     def sent2vocab(self, refer):
         begin_index = self.word2idx['<bos>']
@@ -41,7 +31,7 @@ class WordEmbedding():
                     sentence['vocab'].append(unk_index)
             sentence['vocab'].append(end_index)
 
-            sentence['vocab_tensor'] = LongTensor(sentence['vocab'])
+            sentence['vocab_tensor'] = LongTensor(sentence['vocab'], device=self.device)
 
 def find_vocab(refer, threshold=0):
     vocab = {}

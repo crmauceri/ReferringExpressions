@@ -34,26 +34,26 @@ class LanguageModel(Classifier):
             embed_dim = self.word_embeddings.dim
             self.feats_dim = additional_feat
 
+        self.use_cuda = use_cuda
+        if use_cuda:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
         self.dropout = nn.Dropout(p=self.dropout_p)
         self.lstm = nn.LSTM(embed_dim + self.feats_dim, self.hidden_dim, dropout=self.dropout_p)
         self.hidden2vocab = nn.Linear(self.hidden_dim, vocab_dim)
         self.hidden = self.init_hidden()
 
-        if self.use_cuda:
-            self.cuda()
-
+        self.to(self.device)
         if checkpt_file is not None:
             super(LanguageModel, self).load_model(checkpt_file)
 
     def init_hidden(self):
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        if self.use_cuda:
-            return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda()),
-                    autograd.Variable(torch.zeros(1, 1, self.hidden_dim).cuda()))
-        else:
-            return (autograd.Variable(torch.zeros(1, 1, self.hidden_dim)),
-                    autograd.Variable(torch.zeros(1, 1, self.hidden_dim)))
+        return (torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True),
+                torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True))
 
     def load_params(self, checkpoint):
         self.word_embeddings = checkpoint['word_embeddings']
@@ -70,20 +70,16 @@ class LanguageModel(Classifier):
         if ref is not None:
             sentence = ref['vocab_tensor'][:-1]
         elif word_idx is not None:
-            sentence = torch.LongTensor([word_idx])
+            sentence = torch.LongTensor([word_idx], device=self.device, requires_grad=True)
         else:
             raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
 
-        if self.use_cuda:
-            sentence = sentence.cuda()
-
-        sentence = autograd.Variable(sentence)
         embeds = self.word_embeddings.embeddings(sentence)
         embeds = self.dropout(embeds)
         n, m = embeds.size()
 
         if 'feats' in ref:
-            feats = torch.FloatTensor(ref['feats']).repeat(n, 1)
+            feats = ref['feats'].repeat(n, 1)
 
             #Concatenate text embedding and additional features
             embeds = torch.cat([embeds, feats], 1)
