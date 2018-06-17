@@ -8,7 +8,6 @@ import torch.nn.functional as F
 torch.manual_seed(1)
 
 from ClassifierHelper import Classifier
-from WordEmbedding import WordEmbedding, find_vocab
 
 from refer_python3.refer import REFER
 
