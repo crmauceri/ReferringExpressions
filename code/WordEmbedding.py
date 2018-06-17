@@ -1,4 +1,4 @@
-from torch import FloatTensor, Size
+from torch import FloatTensor, LongTensor, Size
 from torch.nn import Embedding
 
 class WordEmbedding():
@@ -40,6 +40,8 @@ class WordEmbedding():
                 else:
                     sentence['vocab'].append(unk_index)
             sentence['vocab'].append(end_index)
+
+            sentence['vocab_tensor'] = LongTensor(sentence['vocab'])
 
 def find_vocab(refer, threshold=0):
     vocab = {}

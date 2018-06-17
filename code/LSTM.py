@@ -65,10 +65,10 @@ class LanguageModel(Classifier):
                                                                 self.feats_dim, self.dropout_p)
         super(LanguageModel, self).save_model(checkpt_file, params)
 
-    def forward(self, ref=None, word_idx=None, parameters={'feats':[]}):
+    def forward(self, ref=None, word_idx=None, parameters=None):
 
         if ref is not None:
-            sentence = torch.LongTensor(ref['vocab'][:-1])
+            sentence = ref['vocab_tensor'][:-1]
         elif word_idx is not None:
             sentence = torch.LongTensor([word_idx])
         else:
@@ -82,8 +82,8 @@ class LanguageModel(Classifier):
         embeds = self.dropout(embeds)
         n, m = embeds.size()
 
-        if len(parameters['feats']) > 0:
-            feats = torch.FloatTensor(parameters['feats']).repeat(n, 1)
+        if 'feats' in ref:
+            feats = torch.FloatTensor(ref['feats']).repeat(n, 1)
 
             #Concatenate text embedding and additional features
             embeds = torch.cat([embeds, feats], 1)
@@ -94,7 +94,7 @@ class LanguageModel(Classifier):
         return vocab_scores
 
     def targets(self, ref):
-        return torch.LongTensor(ref['vocab'][1:])
+        return ref['vocab_tensor'][1:]
 
     def clear_gradients(self):
         super(LanguageModel, self).clear_gradients()
@@ -112,7 +112,7 @@ class LanguageModel(Classifier):
             self.init_hidden()
 
             while word_idx != end_idx and len(sentence) < 100:
-                output = self(word_idx=word_idx, parameters={'feats':feats})
+                output = self(word_idx=word_idx)
                 word_idx = torch.argmax(output)
                 sentence.append(self.word_embeddings.ind2word[word_idx])
 

@@ -66,7 +66,7 @@ class Classifier(nn.Module):
                 targets = self.targets(instance)
 
                 if self.use_cuda:
-                    loss = loss_function(label_scores.cuda(), targets.cuda())
+                    loss = loss_function(label_scores, targets.cuda())
                 else:
                     loss = loss_function(label_scores, targets)
 
