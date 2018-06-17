@@ -63,7 +63,7 @@ class Classifier(nn.Module):
                 self.clear_gradients()
 
                 label_scores = self(instance, parameters)
-                targets = self.targets(instance)
+                targets = autograd.Variable(self.targets(instance))
 
                 if self.use_cuda:
                     loss = loss_function(label_scores, targets.cuda())
