@@ -15,23 +15,24 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguageModel(Classifier):
 
-    def __init__(self, checkpt_file=None, word_embedding=None, hidden_dim=None, dropout=0,
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0,
             use_cuda=False, additional_feat=0):
         super(LanguageModel, self).__init__(use_cuda)
 
         if checkpt_file is not None:
             m = re.match('hidden(?P<hidden>\d+)_vocab(?P<vocab>\d+)_embed(?P<embed>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
             self.hidden_dim = m.group('hidden')
-            vocab_dim = m.group('vocab')
-            embed_dim = m.group('embed')
+            self.vocab_dim = m.group('vocab')
+            self.embed_dim = m.group('embed')
             self.feats_dim = m.group('feats')
             self.dropout_p = m.group('dropout')
         else:
             self.hidden_dim = hidden_dim
             self.dropout_p = dropout
-            self.word_embeddings = word_embedding
-            vocab_dim = self.word_embeddings.n_vocab
-            embed_dim = self.word_embeddings.dim
+            self.word2idx = dict(zip(vocab, range(len(vocab))))
+            self.ind2word = vocab
+            self.vocab_dim = len(vocab)
+            self.embed_dim = hidden_dim
             self.feats_dim = additional_feat
 
         self.use_cuda = use_cuda
@@ -40,10 +41,13 @@ class LanguageModel(Classifier):
         else:
             self.device = torch.device('cpu')
 
+        #Word Embeddings
+        self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim)
+
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
         self.dropout = nn.Dropout(p=self.dropout_p)
-        self.lstm = nn.LSTM(embed_dim + self.feats_dim, self.hidden_dim, dropout=self.dropout_p)
-        self.hidden2vocab = nn.Linear(self.hidden_dim, vocab_dim)
+        self.lstm = nn.LSTM(self.embed_dim + self.feats_dim, self.hidden_dim, dropout=self.dropout_p)
+        self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
         self.hidden = self.init_hidden()
 
         self.to(self.device)
@@ -56,13 +60,15 @@ class LanguageModel(Classifier):
                 torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True))
 
     def load_params(self, checkpoint):
-        self.word_embeddings = checkpoint['word_embeddings']
+        self.word2idx = checkpoint['word2idx']
+        self.ind2word = checkpoint['ind2word']
 
     def save_model(self, checkpt_file, params):
-        params['word_embeddings'] = self.word_embeddings
+        params['word2idx'] = self.word2idx
+        params['ind2word'] = self.ind2word
         checkpt_file = '{}_hidden{}_vocab{}_embed{}_feats{}_dropout{}.mdl'.format(checkpt_file, self.hidden_dim,
-                                                                self.word_embeddings.n_vocab, self.word_embeddings.dim,
-                                                                self.feats_dim, self.dropout_p)
+                                                                    self.vocab_dim, self.embed_dim,
+                                                                    self.feats_dim, self.dropout_p)
         super(LanguageModel, self).save_model(checkpt_file, params)
 
     def forward(self, ref=None, word_idx=None, parameters=None):
@@ -74,7 +80,7 @@ class LanguageModel(Classifier):
         else:
             raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
 
-        embeds = self.word_embeddings.embeddings(sentence)
+        embeds = self.embedding(sentence)
         embeds = self.dropout(embeds)
         n, m = embeds.size()
 
@@ -101,8 +107,8 @@ class LanguageModel(Classifier):
 
     def generate(self, feats):
         sentence = []
-        word_idx = self.word_embeddings.word2idx['<bos>']
-        end_idx = self.word_embeddings.word2idx['<eos>']
+        word_idx = self.word2idx['<bos>']
+        end_idx = self.word2idx['<eos>']
 
         with torch.no_grad():
             self.init_hidden()
@@ -110,10 +116,40 @@ class LanguageModel(Classifier):
             while word_idx != end_idx and len(sentence) < 100:
                 output = self(word_idx=word_idx)
                 word_idx = torch.argmax(output)
-                sentence.append(self.word_embeddings.ind2word[word_idx])
+                sentence.append(self.ind2word[word_idx])
 
         return sentence
 
+    def sent2vocab(self, refer):
+        begin_index = self.word2idx['<bos>']
+        end_index = self.word2idx['<eos>']
+        unk_index = self.word2idx['<unk>']
+
+        for sentence in refer.Sents.values():
+            sentence['vocab'] = [begin_index]
+            for token in sentence['tokens']:
+                if token in self.word2idx:
+                    sentence['vocab'].append(self.word2idx[token])
+                else:
+                    sentence['vocab'].append(unk_index)
+            sentence['vocab'].append(end_index)
+
+            sentence['vocab_tensor'] = torch.LongTensor(sentence['vocab'], device=self.device)
+
+
+# Helper functions
+def find_vocab(refer, threshold=0):
+    vocab = {}
+
+    for sentence in refer.Sents.values():
+        for token in sentence['tokens']:
+            if token in vocab:
+                vocab[token] = vocab[token]+1
+            else:
+                vocab[token] = 1
+
+    vocab = {token:value for (token,value) in vocab.items() if value > threshold}
+    return list(vocab.keys())
 
 
 if __name__ == "__main__":
@@ -126,9 +162,6 @@ if __name__ == "__main__":
     parser.add_argument('--data_root', help='path to data directory', default='pyutils/refer_python3/data')
     parser.add_argument('--dataset', help='dataset name', default='refcocog')
     parser.add_argument('--splitBy', help='team that made the dataset splits', default='google')
-
-    parser.add_argument('--word_embedding_file', dest='word_embedding_file',
-                        help='Location of trained word embeddings')
     parser.add_argument('--epochs', dest='epochs', type=int, default=1,
                         help='Number of epochs to train (Default: 1)')
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
@@ -140,22 +173,18 @@ if __name__ == "__main__":
     use_cuda = torch.cuda.is_available()
 
     refer = REFER(args.data_root, args.dataset, args.splitBy)
-
-    if args.word_embedding_file is not None:
-        word_embedding = WordEmbedding(word_embedding=args.word_embedding_file, use_cuda=use_cuda)
-    else:
-        vocab = find_vocab(refer)
-        #Add the start and end tokens
-        vocab.extend(['<bos>', '<eos>', '<unk>'])
-        word_embedding = WordEmbedding(vocab=vocab, dim=1024, use_cuda=use_cuda)
-
-    word_embedding.sent2vocab(refer)
+    vocab = find_vocab(refer)
+    # Add the start and end tokens
+    vocab.extend(['<bos>', '<eos>', '<unk>'])
 
     if (os.path.isfile(args.checkpoint_file)):
         model = LanguageModel(checkpt_file=args.checkpoint_file, use_cuda=use_cuda)
     else:
-        model = LanguageModel(word_embedding=word_embedding, hidden_dim=args.hidden_dim,
+        model = LanguageModel(vocab=vocab, hidden_dim=args.hidden_dim,
                               use_cuda=use_cuda, dropout=args.dropout)
+
+    # Preprocess REFER dataset
+    model.sent2vocab(refer)
 
     if(args.mode == 'train'):
         print("Start Training")
