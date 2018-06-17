@@ -75,7 +75,7 @@ class LanguageModel(Classifier):
         if ref is not None:
             sentence = ref['vocab_tensor'][:-1]
         elif word_idx is not None:
-            sentence = torch.LongTensor([word_idx], device=self.device, requires_grad=True)
+            sentence = torch.tensor([word_idx], dtype=torch.long, device=self.device, requires_grad=True)
         else:
             raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
 
@@ -133,7 +133,7 @@ class LanguageModel(Classifier):
                     sentence['vocab'].append(unk_index)
             sentence['vocab'].append(end_index)
 
-            sentence['vocab_tensor'] = torch.LongTensor(sentence['vocab'], device=self.device)
+            sentence['vocab_tensor'] = torch.tensor(sentence['vocab'], dtype=torch.long, device=self.device)
 
 
 # Helper functions
