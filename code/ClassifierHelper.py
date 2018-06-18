@@ -72,7 +72,7 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.item()
 
-            self.total_loss = self.total_loss[epoch] / float(len(train_instances))
+            self.total_loss[epoch] = self.total_loss[epoch] / float(len(train_instances))
             self.save_model(checkpt_file, {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
