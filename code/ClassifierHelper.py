@@ -17,6 +17,11 @@ class Classifier(nn.Module):
         self.start_epoch = 0
         self.loss_function = nn.NLLLoss()
 
+        if self.use_cuda:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
     def forward(self, instance, parameters):
         pass
 
@@ -40,14 +45,15 @@ class Classifier(nn.Module):
         print("=> saving checkpoint '{}'".format(checkpt_file))
         torch.save(params, checkpt_file)
 
-    def train(self, n_epochs, train_instances, validate_instances, checkpt_file, parameters=None, debug=False):
+    def train(self, n_epochs, refer_dataset, checkpt_file, parameters=None, debug=False):
 
         optimizer = optim.SGD(self.parameters(), lr=0.1)
 
         if os.path.exists(checkpt_file) and os.path.isfile(checkpt_file):
             self.load_model(checkpt_file)
 
-        indices = list(range(len(train_instances)))
+        n_train = refer_dataset.length(split='train')
+        indices = list(range(n_train))
 
         for epoch in range(self.start_epoch, n_epochs):
             # Shuffle examples in each batch
@@ -58,7 +64,7 @@ class Classifier(nn.Module):
 
             for j in tqdm(indices, desc='{}rd epoch'.format(epoch)):
 
-                instance = train_instances[j]
+                instance = refer_dataset.getItem(j, split='train', use_image=parameters['use_image'])
 
                 self.clear_gradients()
 
@@ -72,7 +78,7 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.item()
 
-            self.total_loss[epoch] = self.total_loss[epoch] / float(len(train_instances))
+            self.total_loss[epoch] = self.total_loss[epoch] / float(n_train)
             self.save_model(checkpt_file, {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
@@ -83,20 +89,21 @@ class Classifier(nn.Module):
 
             if epoch % 10 == 0:
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.test(validate_instances, parameters)
+                self.val_loss[-1] = self.test(refer_dataset, 'val', parameters)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
-    def test(self, instances, parameters=None):
+    def test(self, refer_dataset, split=None, parameters=None):
+        n = refer_dataset.length(split='train')
         total_loss = 0
-        for k in tqdm(range(len(instances)), desc='Validation'):
-            instance = instances[k]
+        for k in tqdm(range(n), desc='Validation'):
+            instance = refer_dataset.getItem(k, split=split, use_image=parameters['use_image'])
             with torch.no_grad():
                 label_scores = self(instance, parameters)
                 targets = self.targets(instance)
                 total_loss += self.loss_function(label_scores, targets)
-        return total_loss/float(len(instance))
+        return total_loss/float(n)
 
     def targets(self, instance):
         pass
