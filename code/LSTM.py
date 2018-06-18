@@ -187,7 +187,7 @@ if __name__ == "__main__":
 
     if(args.mode == 'train'):
         print("Start Training")
-        total_loss = model.train(args.epochs, refer.loadSents(refer.getRefIds(split='train')), args.checkpoint_file)
+        total_loss = model.train(args.epochs, refer.loadSents(refer.getRefIds(split='train')), refer.loadSents(refer.getRefIds(split='val')),  args.checkpoint_file)
 
     if(args.mode == 'test'):
         print("Start Testing")
