@@ -8,8 +8,7 @@ import torch.nn.functional as F
 torch.manual_seed(1)
 
 from ClassifierHelper import Classifier
-
-from refer_python3.refer import REFER
+from ReferExpressionDataset import ReferExpressionDataset
 
 #Network Definition
 class LanguageModel(Classifier):
@@ -33,12 +32,6 @@ class LanguageModel(Classifier):
             self.vocab_dim = len(vocab)
             self.embed_dim = hidden_dim
             self.feats_dim = additional_feat
-
-        self.use_cuda = use_cuda
-        if use_cuda:
-            self.device = torch.device('cuda')
-        else:
-            self.device = torch.device('cpu')
 
         #Word Embeddings
         self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim)
@@ -71,11 +64,10 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).save_model(checkpt_file, params)
 
     def forward(self, ref=None, word_idx=None, parameters=None):
-
         if ref is not None:
             sentence = ref['vocab_tensor'][:-1]
         elif word_idx is not None:
-            sentence = torch.tensor([word_idx], dtype=torch.long, device=self.device, requires_grad=True)
+            sentence = torch.tensor([word_idx], dtype=torch.long, device=self.device)
         else:
             raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
 
@@ -101,9 +93,6 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).clear_gradients()
         self.hidden = self.init_hidden()
 
-    def train(self, n_epochs, instances, checkpt_file):
-        return super(LanguageModel, self).train(n_epochs, instances, checkpt_file)
-
     def generate(self, feats):
         sentence = []
         word_idx = self.word2idx['<bos>']
@@ -119,37 +108,6 @@ class LanguageModel(Classifier):
 
         return sentence
 
-    def sent2vocab(self, refer):
-        begin_index = self.word2idx['<bos>']
-        end_index = self.word2idx['<eos>']
-        unk_index = self.word2idx['<unk>']
-
-        for sentence in refer.Sents.values():
-            sentence['vocab'] = [begin_index]
-            for token in sentence['tokens']:
-                if token in self.word2idx:
-                    sentence['vocab'].append(self.word2idx[token])
-                else:
-                    sentence['vocab'].append(unk_index)
-            sentence['vocab'].append(end_index)
-
-            sentence['vocab_tensor'] = torch.tensor(sentence['vocab'], dtype=torch.long, device=self.device)
-
-
-# Helper functions
-def find_vocab(refer, threshold=0):
-    vocab = {}
-
-    for sentence in refer.Sents.values():
-        for token in sentence['tokens']:
-            if token in vocab:
-                vocab[token] = vocab[token]+1
-            else:
-                vocab[token] = 1
-
-    vocab = {token:value for (token,value) in vocab.items() if value > threshold}
-    return list(vocab.keys())
-
 
 if __name__ == "__main__":
 
@@ -158,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('checkpoint_file',
                         help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
 
+    parser.add_argument('--img_root', help='path to the image directory', default='pyutils/refer_python3/data/images/')
     parser.add_argument('--data_root', help='path to data directory', default='pyutils/refer_python3/data')
     parser.add_argument('--dataset', help='dataset name', default='refcocog')
     parser.add_argument('--splitBy', help='team that made the dataset splits', default='google')
@@ -171,10 +130,12 @@ if __name__ == "__main__":
 
     use_cuda = torch.cuda.is_available()
 
-    refer = REFER(args.data_root, args.dataset, args.splitBy)
-    vocab = find_vocab(refer)
+    with open('vocab_file.txt', 'r') as f:
+        vocab = f.read().split()
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
+
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda)
 
     if (os.path.isfile(args.checkpoint_file)):
         model = LanguageModel(checkpt_file=args.checkpoint_file, use_cuda=use_cuda)
@@ -182,12 +143,9 @@ if __name__ == "__main__":
         model = LanguageModel(vocab=vocab, hidden_dim=args.hidden_dim,
                               use_cuda=use_cuda, dropout=args.dropout)
 
-    # Preprocess REFER dataset
-    model.sent2vocab(refer)
-
     if(args.mode == 'train'):
         print("Start Training")
-        total_loss = model.train(args.epochs, refer.loadSents(refer.getRefIds(split='train')), args.checkpoint_file)
+        total_loss = model.train(args.epochs, refer, args.checkpoint_file, parameters={'use_image':False})
 
     if(args.mode == 'test'):
         print("Start Testing")
