@@ -101,9 +101,6 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).clear_gradients()
         self.hidden = self.init_hidden()
 
-    def train(self, n_epochs, instances, checkpt_file):
-        return super(LanguageModel, self).train(n_epochs, instances, checkpt_file)
-
     def generate(self, feats):
         sentence = []
         word_idx = self.word2idx['<bos>']
