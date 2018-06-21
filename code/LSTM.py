@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')
     parser.add_argument('mode', help='train/test')
-    parser.add_argument('checkpoint_file',
+    parser.add_argument('checkpoint_prefix',
                         help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
 
     parser.add_argument('--img_root', help='path to the image directory', default='pyutils/refer_python3/data/images/')
@@ -130,15 +130,16 @@ if __name__ == "__main__":
 
     refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda)
 
-    if (os.path.isfile(args.checkpoint_file)):
-        model = LanguageModel(checkpt_file=args.checkpoint_file, use_cuda=use_cuda)
+    checkpt_file = LanguageModel.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 0, args.dropout)
+    if (os.path.isfile(checkpt_file)):
+        model = LanguageModel(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
     else:
         model = LanguageModel(vocab=vocab, hidden_dim=args.hidden_dim,
-                              use_cuda=use_cuda, dropout=args.dropout)
+                                  use_cuda=use_cuda, dropout=args.dropout)
 
     if(args.mode == 'train'):
         print("Start Training")
-        total_loss = model.train(args.epochs, refer, args.checkpoint_file, parameters={'use_image':False})
+        total_loss = model.train(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image':False})
 
     if(args.mode == 'test'):
         print("Start Testing")
