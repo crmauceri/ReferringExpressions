@@ -50,11 +50,11 @@ class LanguageModel(Classifier):
                 torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True))
 
     @staticmethod
-    def get_checkpt_name(checkpt_file, hidden_dim, feats_dim, dropout_p):
+    def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
         return '{}_hidden{}_feats{}_dropout{}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
 
-    def checkpt_name(self, checkpt_file):
-        return self.get_checkpt_name(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
+    def checkpt_file(self, checkpt_file):
+        return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def forward(self, ref=None, word_idx=None, parameters=None):
         if ref is not None:
