@@ -96,7 +96,7 @@ class Classifier(nn.Module):
         return self.total_loss
 
     def test(self, refer_dataset, split=None, parameters=None):
-        n = refer_dataset.length(split='train')
+        n = refer_dataset.length(split=split)
         total_loss = 0
         for k in tqdm(range(n), desc='Validation'):
             instance = refer_dataset.getItem(k, split=split, use_image=parameters['use_image'])
