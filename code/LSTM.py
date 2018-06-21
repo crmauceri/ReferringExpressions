@@ -18,22 +18,20 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).__init__(use_cuda)
 
         if checkpt_file is not None:
-            m = re.match('hidden(?P<hidden>\d+)_vocab(?P<vocab>\d+)_embed(?P<embed>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
-            self.hidden_dim = m.group('hidden')
-            self.vocab_dim = m.group('vocab')
-            self.embed_dim = m.group('embed')
-            self.feats_dim = m.group('feats')
-            self.dropout_p = m.group('dropout')
+            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
+            self.hidden_dim = int(m.group('hidden'))
+            self.feats_dim = int(m.group('feats'))
+            self.dropout_p = float(m.group('dropout'))
         else:
             self.hidden_dim = hidden_dim
             self.dropout_p = dropout
-            self.word2idx = dict(zip(vocab, range(len(vocab))))
-            self.ind2word = vocab
-            self.vocab_dim = len(vocab)
             self.embed_dim = hidden_dim
             self.feats_dim = additional_feat
 
         #Word Embeddings
+        self.word2idx = dict(zip(vocab, range(len(vocab))))
+        self.ind2word = vocab
+        self.vocab_dim = len(vocab)
         self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim)
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
@@ -51,17 +49,12 @@ class LanguageModel(Classifier):
         return (torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True),
                 torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True))
 
-    def load_params(self, checkpoint):
-        self.word2idx = checkpoint['word2idx']
-        self.ind2word = checkpoint['ind2word']
+    @staticmethod
+    def get_checkpt_name(checkpt_file, hidden_dim, feats_dim, dropout_p):
+        return '{}_hidden{}_feats{}_dropout{}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
 
-    def save_model(self, checkpt_file, params):
-        params['word2idx'] = self.word2idx
-        params['ind2word'] = self.ind2word
-        checkpt_file = '{}_hidden{}_vocab{}_embed{}_feats{}_dropout{}.mdl'.format(checkpt_file, self.hidden_dim,
-                                                                    self.vocab_dim, self.embed_dim,
-                                                                    self.feats_dim, self.dropout_p)
-        super(LanguageModel, self).save_model(checkpt_file, params)
+    def checkpt_name(self, checkpt_file):
+        return self.get_checkpt_name(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def forward(self, ref=None, word_idx=None, parameters=None):
         if ref is not None:
@@ -87,7 +80,7 @@ class LanguageModel(Classifier):
         return vocab_scores
 
     def targets(self, ref):
-        return ref['vocab_tensor'][1:]
+        return torch.tensor(ref['vocab_tensor'][1:], dtype=torch.long, requires_grad=False, device=self.device)
 
     def clear_gradients(self):
         super(LanguageModel, self).clear_gradients()

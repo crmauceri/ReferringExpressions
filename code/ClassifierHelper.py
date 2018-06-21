@@ -41,16 +41,16 @@ class Classifier(nn.Module):
     def load_params(self, checkpoint):
         pass
 
-    def save_model(self, checkpt_file, params):
-        print("=> saving checkpoint '{}'".format(checkpt_file))
-        torch.save(params, checkpt_file)
+    def save_model(self, checkpt_prefix, params):
+        print("=> saving checkpoint '{}'".format(checkpt_prefix))
+        torch.save(params, self.checkpt_file(checkpt_prefix))
 
-    def train(self, n_epochs, refer_dataset, checkpt_file, parameters=None, debug=False):
+    def checkpt_file(self, checkpt_prefix):
+        return '{}.mdl'.format(checkpt_prefix)
 
-        optimizer = optim.SGD(self.parameters(), lr=0.1)
+    def train(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, debug=False):
 
-        if os.path.exists(checkpt_file) and os.path.isfile(checkpt_file):
-            self.load_model(checkpt_file)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=0.1)
 
         n_train = refer_dataset.length(split='train')
         indices = list(range(n_train))
@@ -78,8 +78,8 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.item()
 
-            self.total_loss = self.total_loss[epoch] / float(n_train)
-            self.save_model(checkpt_file, {
+            self.total_loss[epoch] = self.total_loss[epoch] / float(n_train)
+            self.save_model(checkpt_prefix, {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
                 'total_loss': self.total_loss,

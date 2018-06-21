@@ -23,9 +23,10 @@ class TruncatedResNet(nn.Module):
         return x
 
 class TruncatedVGGorAlex(nn.Module):
-    def __init__(self, vgg, maxpool=False):
+    def __init__(self, vgg, maxpool=False, ignore_classification=False, fix_weights=None):
         super(TruncatedVGGorAlex, self).__init__()
         self.VGG = vgg
+        self.ignore_classification = ignore_classification
         #Remove last pooling layer
         if not maxpool:
             self.VGG.features = nn.Sequential(*list(vgg.features.children())[:-1])
@@ -33,6 +34,23 @@ class TruncatedVGGorAlex(nn.Module):
         else:
             self.output_dim = (512, 7, 7)
 
+        if fix_weights is not None:
+            self.freeze(fix_weights)
+
      # Forward pass ignores classification layers
     def forward(self, x):
-        return self.VGG.features(x)
+        if self.ignore_classification:
+            return self.VGG.features(x)
+        else:
+            return self.VGG(x)
+
+    def freeze(self, fix_weights):
+        child_counter = 0
+        for child in self.VGG.modules():
+            if child_counter in fix_weights:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1

@@ -1,5 +1,5 @@
 import os
-from skimage import io, transform
+from PIL import Image
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -22,7 +22,6 @@ class ReferExpressionDataset(Dataset):
 
         self.root_dir = imagedir
         self.img_transform = transform
-        self.obj_transform = transforms.Compose([CropBoundingBox, transform])
 
         self.index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']]
         self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'train']
@@ -56,19 +55,28 @@ class ReferExpressionDataset(Dataset):
         ref = self.refer.sentToRef[sent_idx]
         bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float, device=self.device)
 
+
         if use_image:
             img_name = os.path.join(self.root_dir,
                                     self.refer.Imgs[ref['image_id']]['file_name'])
-            image = io.imread(img_name)
+            image = Image.open(img_name)
 
-            sample = {'image': image, 'bbox': bbox}
-            sample['object'] = self.obj_transform(sample)
+            if image.mode != "RGB":
+                image = image.convert("RGB")
 
-            if self.transform:
-                sample['image'] = self.transform(sample['image'])
+            object = self.img_transform(cropBoundingBox(image, bbox))
+
+            # Position features
+            # [left_x / W, top_y/H, right_x/W, bottom_y/H, size_bbox/size_image]
+            w, h = image.size
+
+            pos = torch.tensor([bbox[0]/w, (bbox[1]+bbox[3])/h, (bbox[0]+bbox[2])/w, bbox[1]/h, (bbox[2]*bbox[3])/(w*h)], dtype=torch.float, device=self.device)
+
+            sample = {'image': self.img_transform(image), 'object': object, 'pos': pos}
         else:
             sample = {}
 
+        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
         sample['vocab_tensor'] = sentence
         return sample
 
@@ -89,19 +97,14 @@ class ReferExpressionDataset(Dataset):
             sentence['vocab_tensor'] = torch.tensor(sentence['vocab'], dtype=torch.long, device=self.device)
 
 
-class CropBoundingBox(object):
-    """Crop the image in a sample."""
+#Helper function
+def cropBoundingBox(image, bbox):
 
-    def __call__(self, sample):
-        image, bbox = sample['image'], sample['bbox']
+    height, width = bbox[2:]
 
-        h, w = image.shape[:2]
-        new_h, new_w = sample['bbox'][2:]
+    bottom = int(bbox[1].item())
+    left = int(bbox[0].item())
 
-        top = sample['bbox'][1]
-        left = sample['bbox'][0]
+    image = image.crop((left, bottom+int(height), left+int(width), bottom))
 
-        image = image[top: top + new_h,
-                      left: left + new_w]
-
-        return image
+    return image
