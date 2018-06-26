@@ -35,8 +35,9 @@ class LanguageModel(Classifier):
         self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim)
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
-        self.dropout = nn.Dropout(p=self.dropout_p)
-        self.lstm = nn.LSTM(self.embed_dim + self.feats_dim, self.hidden_dim, dropout=self.dropout_p)
+        self.dropout1 = nn.Dropout(p=self.dropout_p)
+        self.lstm = nn.LSTM(self.embed_dim + self.feats_dim, self.hidden_dim)
+        self.dropout2 = nn.Dropout(p=self.dropout_p)
         self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
         self.hidden = self.init_hidden()
 
@@ -59,7 +60,7 @@ class LanguageModel(Classifier):
     def forward(self, ref=None, parameters=None):
         sentence = ref['vocab_tensor'][:-1]
         embeds = self.embedding(sentence)
-        embeds = self.dropout(embeds)
+        embeds = self.dropout1(embeds)
         n, m = embeds.size()
 
         if 'feats' in ref:
@@ -69,6 +70,7 @@ class LanguageModel(Classifier):
             embeds = torch.cat([embeds, feats], 1)
 
         lstm_out, self.hidden = self.lstm(embeds.view(n, 1, -1), self.hidden)
+        lstm_out = self.dropout2(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out.view(len(sentence), -1))
         vocab_scores = F.log_softmax(vocab_space, dim=1)
         return vocab_scores
@@ -87,6 +89,7 @@ class LanguageModel(Classifier):
         self.hidden = self.init_hidden()
 
     def generate(self, start_word='<bos>', feats=None):
+        self.eval()
         sentence = []
         word_idx = self.word2idx[start_word]
         end_idx = self.word2idx['<eos>']
@@ -94,7 +97,7 @@ class LanguageModel(Classifier):
         with torch.no_grad():
             self.init_hidden()
 
-            while word_idx != end_idx and len(sentence) < 100:
+            while word_idx != end_idx and len(sentence) < 30:
                 ref = self.make_ref(word_idx, feats)
                 output = self(ref)
                 word_idx = torch.argmax(output)
@@ -140,7 +143,7 @@ if __name__ == "__main__":
 
     if(args.mode == 'train'):
         print("Start Training")
-        total_loss = model.train(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image':False})
+        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image':False})
 
     if(args.mode == 'test'):
         print("Start Testing")

@@ -83,6 +83,7 @@ class LanguagePlusImage(Classifier):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def generate(self, start_word, ref):
+        self.eval()
         feats = self.image_forward(ref)
         return self.wordnet.generate(start_word, feats)
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
 
     if args.mode == 'train':
         print("Start Training")
-        total_loss = model.train(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
+        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
 
     if args.mode == 'test':
         print("Start Testing")

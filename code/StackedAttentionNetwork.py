@@ -99,7 +99,7 @@ class SAN(Classifier):
 
     def train(self, n_epochs, instances, images, checkpt_file):
         parameters = {'images': images}
-        return super(SAN, self).train(n_epochs, instances, checkpt_file, parameters)
+        return super(SAN, self).run_training(n_epochs, instances, checkpt_file, parameters)
     #
     # def make_prediction(self, prepared_data):
     #     predictions = []

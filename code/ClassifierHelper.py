@@ -48,14 +48,15 @@ class Classifier(nn.Module):
     def checkpt_file(self, checkpt_prefix):
         return '{}.mdl'.format(checkpt_prefix)
 
-    def train(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, debug=False):
-
+    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, debug=False):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
 
         n_train = refer_dataset.length(split='train')
         indices = list(range(n_train))
 
         for epoch in range(self.start_epoch, n_epochs):
+            self.train()
+
             # Shuffle examples in each batch
             if debug:
                 random.seed(1) #DEBUGGING
@@ -90,12 +91,13 @@ class Classifier(nn.Module):
 
             if epoch % 10 == 0:
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.test(refer_dataset, 'val', parameters)
+                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', parameters)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
-    def test(self, refer_dataset, split=None, parameters=None):
+    def run_testing(self, refer_dataset, split=None, parameters=None):
+        self.eval()
         n = refer_dataset.length(split=split)
         total_loss = 0
         for k in tqdm(range(n), desc='Validation'):
@@ -113,6 +115,7 @@ class Classifier(nn.Module):
         self.zero_grad()
 
     def make_prediction(self, instances, parameters):
+        self.eval()
         predictions = []
         with torch.no_grad():
             for i in tqdm(range(len(instances))):
