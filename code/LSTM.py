@@ -56,14 +56,8 @@ class LanguageModel(Classifier):
     def checkpt_file(self, checkpt_file):
         return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
-    def forward(self, ref=None, word_idx=None, parameters=None):
-        if ref is not None:
-            sentence = ref['vocab_tensor'][:-1]
-        elif word_idx is not None:
-            sentence = torch.tensor([word_idx], dtype=torch.long, device=self.device)
-        else:
-            raise ValueError('LanguageModel.forward must have either a ref or word_idx input')
-
+    def forward(self, ref=None, parameters=None):
+        sentence = ref['vocab_tensor'][:-1]
         embeds = self.embedding(sentence)
         embeds = self.dropout(embeds)
         n, m = embeds.size()
@@ -79,6 +73,12 @@ class LanguageModel(Classifier):
         vocab_scores = F.log_softmax(vocab_space, dim=1)
         return vocab_scores
 
+    def make_ref(self, word_idx, feats=None):
+        ref = {'vocab_tensor': torch.tensor([word_idx, -1], dtype=torch.long, device=self.device)}
+        if feats is not None:
+            ref['feats'] = feats
+        return ref
+
     def targets(self, ref):
         return torch.tensor(ref['vocab_tensor'][1:], dtype=torch.long, requires_grad=False, device=self.device)
 
@@ -86,16 +86,17 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).clear_gradients()
         self.hidden = self.init_hidden()
 
-    def generate(self, feats):
+    def generate(self, start_word='<bos>', feats=None):
         sentence = []
-        word_idx = self.word2idx['<bos>']
+        word_idx = self.word2idx[start_word]
         end_idx = self.word2idx['<eos>']
 
         with torch.no_grad():
             self.init_hidden()
 
             while word_idx != end_idx and len(sentence) < 100:
-                output = self(word_idx=word_idx)
+                ref = self.make_ref(word_idx, feats)
+                output = self(ref)
                 word_idx = torch.argmax(output)
                 sentence.append(self.ind2word[word_idx])
 

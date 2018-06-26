@@ -39,7 +39,7 @@ class ReferExpressionDataset(Dataset):
         elif split == 'val':
             return len(self.val_index)
 
-    def getItem(self, idx, split=None, use_image=False):
+    def getItem(self, idx, split=None, use_image=False, display_image=False):
 
         if split is None:
             sent_idx = self.index[idx]
@@ -56,7 +56,7 @@ class ReferExpressionDataset(Dataset):
         bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float, device=self.device)
 
 
-        if use_image:
+        if use_image or display_image:
             img_name = os.path.join(self.root_dir,
                                     self.refer.Imgs[ref['image_id']]['file_name'])
             image = Image.open(img_name)
@@ -73,6 +73,8 @@ class ReferExpressionDataset(Dataset):
             pos = torch.tensor([bbox[0]/w, (bbox[1]+bbox[3])/h, (bbox[0]+bbox[2])/w, bbox[1]/h, (bbox[2]*bbox[3])/(w*h)], dtype=torch.float, device=self.device)
 
             sample = {'image': self.img_transform(image), 'object': object, 'pos': pos}
+            if display_image:
+                sample['PIL'] = image
         else:
             sample = {}
 

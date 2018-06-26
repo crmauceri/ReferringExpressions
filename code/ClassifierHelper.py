@@ -50,7 +50,7 @@ class Classifier(nn.Module):
 
     def train(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, debug=False):
 
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=0.1)
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
 
         n_train = refer_dataset.length(split='train')
         indices = list(range(n_train))

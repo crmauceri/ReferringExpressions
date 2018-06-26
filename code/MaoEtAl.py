@@ -41,29 +41,32 @@ class LanguagePlusImage(Classifier):
             super(LanguagePlusImage, self).load_model(checkpt_file)
 
     def forward(self, ref, parameters):
-        #Global feature
+        ref['feats'] = self.image_forward(ref)
+
+        #Input to LanguageModel
+        return self.wordnet(ref=ref)
+
+    def image_forward(self, ref):
+        # Global feature
         image = ref['image']
         image = image.unsqueeze(0)
         if self.use_cuda:
             image = image.cuda()
         image_out = self.imagenet(image)
 
-        #Object feature
+        # Object feature
         object = ref['object']
         object = object.unsqueeze(0)
         if self.use_cuda:
             object = object.cuda()
         object_out = self.imagenet(object)
 
-        #Position features
-        #[top_left_x / W, top_left_y/H, bottom_left_x/W, bottom_left_y/H, size_bbox/size_image]
+        # Position features
+        # [top_left_x / W, top_left_y/H, bottom_left_x/W, bottom_left_y/H, size_bbox/size_image]
         pos = ref['pos']
 
-        #Concatenate image representations
-        ref['feats'] = torch.cat([image_out.view(1, -1), object_out.view(1, -1), pos.view(1, -1)], 1)
-
-        #Input to LanguageModel
-        return self.wordnet(ref=ref)
+        # Concatenate image representations
+        return torch.cat([image_out.view(1, -1), object_out.view(1, -1), pos.view(1, -1)], 1)
 
     def targets(self, instance):
         return self.wordnet.targets(instance)
@@ -78,6 +81,10 @@ class LanguagePlusImage(Classifier):
 
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p)
+
+    def generate(self, start_word, ref):
+        feats = self.image_forward(ref)
+        return self.wordnet.generate(start_word, feats)
 
 if __name__ == "__main__":
 
@@ -120,11 +127,14 @@ if __name__ == "__main__":
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim,
                               use_cuda=use_cuda, dropout=args.dropout)
 
-    if (args.mode == 'train'):
+    if args.mode == 'train':
         print("Start Training")
         total_loss = model.train(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
 
-    if (args.mode == 'test'):
+    if args.mode == 'test':
         print("Start Testing")
-        print(model.generate([]))
-
+        for i in range(10, 20):
+            item = refer.getItem(i, split='val', use_image=True, display_image=True)
+            item['PIL'].show()
+            print(model.generate("<bos>", item))
+            input('Any key to continue')
