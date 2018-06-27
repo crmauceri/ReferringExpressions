@@ -20,7 +20,7 @@ class ReferExpressionDataset(Dataset):
         self.use_image = use_image
 
         self.refer = REFER(dataroot, dataset, splitBy)
-        self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()])
+        self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.sent2vocab(self.word2idx)
 
