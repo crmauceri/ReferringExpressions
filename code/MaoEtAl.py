@@ -3,6 +3,7 @@ import argparse, os, re
 import torch
 import torchvision.models as models
 import torchvision.transforms as transforms
+import cProfile
 
 torch.manual_seed(1)
 
@@ -49,14 +50,12 @@ class LanguagePlusImage(Classifier):
     def image_forward(self, ref):
         # Global feature
         image = ref['image']
-        image = image.unsqueeze(0)
         if self.use_cuda:
             image = image.cuda()
         image_out = self.imagenet(image)
 
         # Object feature
         object = ref['object']
-        object = object.unsqueeze(0)
         if self.use_cuda:
             object = object.cuda()
         object_out = self.imagenet(object)
@@ -66,14 +65,14 @@ class LanguagePlusImage(Classifier):
         pos = ref['pos']
 
         # Concatenate image representations
-        return torch.cat([image_out.view(1, -1), object_out.view(1, -1), pos.view(1, -1)], 1)
+        return torch.cat([image_out, object_out, pos], 1)
 
     def targets(self, instance):
         return self.wordnet.targets(instance)
 
-    def clear_gradients(self):
+    def clear_gradients(self, batch_size):
         super(LanguagePlusImage, self).clear_gradients()
-        self.wordnet.clear_gradients()
+        self.wordnet.clear_gradients(batch_size)
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
@@ -119,7 +118,8 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda, transform=transform)
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda,
+                                   transform=transform, use_image=True)
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
@@ -131,6 +131,7 @@ if __name__ == "__main__":
     if args.mode == 'train':
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
+        #cProfile.run('model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={"use_image": True})')
 
     if args.mode == 'test':
         print("Start Testing")

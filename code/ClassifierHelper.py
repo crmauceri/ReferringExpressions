@@ -3,6 +3,7 @@ from tqdm import *
 
 import torch
 import torch.autograd as autograd
+from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
 
@@ -48,38 +49,32 @@ class Classifier(nn.Module):
     def checkpt_file(self, checkpt_prefix):
         return '{}.mdl'.format(checkpt_prefix)
 
-    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, debug=False):
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()))
+    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, learning_rate=0.001, batch_size=4):
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate)
 
-        n_train = refer_dataset.length(split='train')
-        indices = list(range(n_train))
+        refer_dataset.active_split = 'train'
+        dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
 
         for epoch in range(self.start_epoch, n_epochs):
             self.train()
-
-            # Shuffle examples in each batch
-            if debug:
-                random.seed(1) #DEBUGGING
-            random.shuffle(indices)
+            refer_dataset.active_split = 'train'
             self.total_loss.append(0)
 
-            for j in tqdm(indices, desc='{}rd epoch'.format(epoch)):
+            for i_batch, sample_batched in enumerate(tqdm(dataloader, desc='{}rd epoch'.format(epoch))):
+            #for j in tqdm(indices, desc='{}rd epoch'.format(epoch)):
+                self.clear_gradients(batch_size)
 
-                instance = refer_dataset.getItem(j, split='train', use_image=parameters['use_image'])
+                label_scores = self(sample_batched, parameters)
+                targets = self.targets(sample_batched)
 
-                self.clear_gradients()
-
-                label_scores = self(instance, parameters)
-                targets = self.targets(instance)
-
-                loss = self.loss_function(label_scores, targets)
+                loss = self.loss_function(label_scores.permute(1, 2, 0), targets)
 
                 loss.backward()
                 optimizer.step()
 
                 self.total_loss[epoch] += loss.item()
 
-            self.total_loss[epoch] = self.total_loss[epoch] / float(n_train)
+            self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch)
 
             self.save_model(checkpt_prefix, {
                 'epoch': epoch + 1,
@@ -98,10 +93,12 @@ class Classifier(nn.Module):
 
     def run_testing(self, refer_dataset, split=None, parameters=None):
         self.eval()
-        n = refer_dataset.length(split=split)
+        refer_dataset.active_split = split
+        n = len(refer_dataset)
+        dataloader = DataLoader(refer_dataset)
+
         total_loss = 0
-        for k in tqdm(range(n), desc='Validation'):
-            instance = refer_dataset.getItem(k, split=split, use_image=parameters['use_image'])
+        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
             with torch.no_grad():
                 label_scores = self(instance, parameters)
                 targets = self.targets(instance)
@@ -111,7 +108,7 @@ class Classifier(nn.Module):
     def targets(self, instance):
         pass
 
-    def clear_gradients(self):
+    def clear_gradients(self, batch_size=None):
         self.zero_grad()
 
     def make_prediction(self, instances, parameters):

@@ -9,16 +9,21 @@ from refer_python3.refer import REFER
 
 class ReferExpressionDataset(Dataset):
 
-    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform=None):
+    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform=None, use_image=False):
 
         if use_cuda:
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
 
+        self.active_split = None
+        self.use_image = use_image
+
         self.refer = REFER(dataroot, dataset, splitBy)
-        self.word2idx = dict(zip(vocab, range(len(vocab))))
+        self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()])
+        self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.sent2vocab(self.word2idx)
+
 
         self.root_dir = imagedir
         self.img_transform = transform
@@ -28,6 +33,11 @@ class ReferExpressionDataset(Dataset):
         self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
         self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'test']
 
+    def __len__(self):
+        return self.length(self.active_split)
+
+    def __getitem__(self, item):
+        return self.getItem(item, self.active_split)
 
     def length(self, split=None):
         if split is None:
@@ -39,7 +49,7 @@ class ReferExpressionDataset(Dataset):
         elif split == 'val':
             return len(self.val_index)
 
-    def getItem(self, idx, split=None, use_image=False, display_image=False):
+    def getItem(self, idx, split=None, display_image=False):
 
         if split is None:
             sent_idx = self.index[idx]
@@ -56,7 +66,7 @@ class ReferExpressionDataset(Dataset):
         bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float, device=self.device)
 
 
-        if use_image or display_image:
+        if self.use_image or display_image:
             img_name = os.path.join(self.root_dir,
                                     self.refer.Imgs[ref['image_id']]['file_name'])
             image = Image.open(img_name)
@@ -87,6 +97,7 @@ class ReferExpressionDataset(Dataset):
         end_index = word2idx['<eos>']
         unk_index = word2idx['<unk>']
 
+
         for sentence in self.refer.Sents.values():
             sentence['vocab'] = [begin_index]
             for token in sentence['tokens']:
@@ -96,7 +107,8 @@ class ReferExpressionDataset(Dataset):
                     sentence['vocab'].append(unk_index)
             sentence['vocab'].append(end_index)
 
-            sentence['vocab_tensor'] = torch.tensor(sentence['vocab'], dtype=torch.long, device=self.device)
+            padding = [0.0]*(self.max_sent_len - len(sentence['vocab']))
+            sentence['vocab_tensor'] = torch.tensor(padding + sentence['vocab'], dtype=torch.long, device=self.device)
 
 
 #Helper function

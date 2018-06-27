@@ -32,23 +32,23 @@ class LanguageModel(Classifier):
         self.word2idx = dict(zip(vocab, range(len(vocab))))
         self.ind2word = vocab
         self.vocab_dim = len(vocab)
-        self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim)
+        self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim, padding_idx=0)
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
         self.dropout1 = nn.Dropout(p=self.dropout_p)
         self.lstm = nn.LSTM(self.embed_dim + self.feats_dim, self.hidden_dim)
         self.dropout2 = nn.Dropout(p=self.dropout_p)
         self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
-        self.hidden = self.init_hidden()
+        self.hidden = self.init_hidden(1)
 
         self.to(self.device)
         if checkpt_file is not None:
             super(LanguageModel, self).load_model(checkpt_file)
 
-    def init_hidden(self):
+    def init_hidden(self, batch_size):
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True),
-                torch.zeros(1, 1, self.hidden_dim, device=self.device, requires_grad=True))
+        return (torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True),
+                torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True))
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
@@ -58,21 +58,21 @@ class LanguageModel(Classifier):
         return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def forward(self, ref=None, parameters=None):
-        sentence = ref['vocab_tensor'][:-1]
+        sentence = ref['vocab_tensor'][:, :-1]
         embeds = self.embedding(sentence)
-        embeds = self.dropout1(embeds)
-        n, m = embeds.size()
+        embeds = self.dropout1(embeds).permute(1, 0, 2)
+        n, m, b = embeds.size()
 
         if 'feats' in ref:
-            feats = ref['feats'].repeat(n, 1)
+            feats = ref['feats'].repeat(n, 1, 1)
 
             #Concatenate text embedding and additional features
-            embeds = torch.cat([embeds, feats], 1)
+            embeds = torch.cat([embeds, feats], 2)
 
-        lstm_out, self.hidden = self.lstm(embeds.view(n, 1, -1), self.hidden)
+        lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)
-        vocab_space = self.hidden2vocab(lstm_out.view(len(sentence), -1))
-        vocab_scores = F.log_softmax(vocab_space, dim=1)
+        vocab_space = self.hidden2vocab(lstm_out)
+        vocab_scores = F.log_softmax(vocab_space, dim=2)
         return vocab_scores
 
     def make_ref(self, word_idx, feats=None):
@@ -82,11 +82,11 @@ class LanguageModel(Classifier):
         return ref
 
     def targets(self, ref):
-        return torch.tensor(ref['vocab_tensor'][1:], dtype=torch.long, requires_grad=False, device=self.device)
+        return torch.tensor(ref['vocab_tensor'][:, 1:], dtype=torch.long, requires_grad=False, device=self.device)
 
-    def clear_gradients(self):
+    def clear_gradients(self, batch_size):
         super(LanguageModel, self).clear_gradients()
-        self.hidden = self.init_hidden()
+        self.hidden = self.init_hidden(batch_size)
 
     def generate(self, start_word='<bos>', feats=None):
         self.eval()
