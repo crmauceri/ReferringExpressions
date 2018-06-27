@@ -53,7 +53,11 @@ class Classifier(nn.Module):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate)
 
         refer_dataset.active_split = 'train'
-        dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
+        
+	if self.use_cuda:
+  	    dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=1)
+	else:
+	    dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
 
         for epoch in range(self.start_epoch, n_epochs):
             self.train()
