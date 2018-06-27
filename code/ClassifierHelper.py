@@ -55,7 +55,7 @@ class Classifier(nn.Module):
         refer_dataset.active_split = 'train'
 
         if self.use_cuda:
-            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=1)
+            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True)
         else:
             dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
 
