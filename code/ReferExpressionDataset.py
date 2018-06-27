@@ -63,7 +63,7 @@ class ReferExpressionDataset(Dataset):
         sentence = self.refer.Sents[sent_idx]['vocab_tensor']
 
         ref = self.refer.sentToRef[sent_idx]
-        bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float, device=self.device)
+        bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float)
 
 
         if self.use_image or display_image:

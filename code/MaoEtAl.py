@@ -67,8 +67,8 @@ class LanguagePlusImage(Classifier):
         # Concatenate image representations
         return torch.cat([image_out, object_out, pos], 1)
 
-    def targets(self, instance):
-        return self.wordnet.targets(instance)
+    def trim_batch(self, instance):
+        return self.wordnet.trim_batch(instance)
 
     def clear_gradients(self, batch_size):
         super(LanguagePlusImage, self).clear_gradients()

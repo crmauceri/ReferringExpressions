@@ -81,8 +81,10 @@ class LanguageModel(Classifier):
             ref['feats'] = feats
         return ref
 
-    def targets(self, ref):
-        return torch.tensor(ref['vocab_tensor'][:, 1:], dtype=torch.long, requires_grad=False, device=self.device)
+    def trim_batch(self, ref):
+        ref['vocab_tensor'] = ref['vocab_tensor'][:, torch.sum(ref['vocab_tensor'], 0) > 0]
+        target = torch.tensor(ref['vocab_tensor'][:, 1:], dtype=torch.long, requires_grad=False, device=self.device)
+        return ref, target
 
     def clear_gradients(self, batch_size):
         super(LanguageModel, self).clear_gradients()
