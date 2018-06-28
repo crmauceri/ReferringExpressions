@@ -1,32 +1,30 @@
-import os.path, argparse, re, sys
+import os.path, argparse
 
 import torch
-import torch.autograd as autograd
+from torch.utils.data import DataLoader
 import torch.nn as nn
-import torch.nn.functional as F
 
 torch.manual_seed(1)
 
-from ClassifierHelper import Classifier
 from ReferExpressionDataset import ReferExpressionDataset
 
 #Network Definition
-class LanguageModel(Classifier):
+class LanguageModel(nn.Module):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0,
+    def __init__(self, vocab=None, hidden_dim=None, dropout=0,
             use_cuda=False, additional_feat=0):
-        super(LanguageModel, self).__init__(use_cuda)
+        super(LanguageModel, self).__init__()
 
-        if checkpt_file is not None:
-            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
-            self.hidden_dim = int(m.group('hidden'))
-            self.feats_dim = int(m.group('feats'))
-            self.dropout_p = float(m.group('dropout'))
+        self.use_cuda = use_cuda
+        if self.use_cuda:
+            self.device = torch.device('cuda')
         else:
-            self.hidden_dim = hidden_dim
-            self.dropout_p = dropout
-            self.embed_dim = hidden_dim
-            self.feats_dim = additional_feat
+            self.device = torch.device('cpu')
+
+        self.hidden_dim = hidden_dim
+        self.dropout_p = dropout
+        self.embed_dim = hidden_dim
+        self.feats_dim = additional_feat
 
         #Word Embeddings
         self.word2idx = dict(zip(vocab, range(len(vocab))))
@@ -42,20 +40,32 @@ class LanguageModel(Classifier):
         self.hidden = self.init_hidden(1)
 
         self.to(self.device)
-        if checkpt_file is not None:
-            super(LanguageModel, self).load_model(checkpt_file)
 
     def init_hidden(self, batch_size):
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
         return (torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True),
                 torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True))
 
-    @staticmethod
-    def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
-        return '{}_hidden{}_feats{}_dropout{}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
+    def run_debug(self,refer_dataset, batch_size=4):
+        refer_dataset.active_split = 'train'
 
-    def checkpt_file(self, checkpt_file):
-        return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
+        if self.use_cuda:
+            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True)
+        else:
+            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
+
+
+        self.train()
+        refer_dataset.active_split = 'train'
+
+        for i_batch, sample_batched in enumerate(dataloader):
+            if i_batch == 2388:
+                print(sample_batched['vocab_tensor'])
+                instances, targets = self.trim_batch(sample_batched)
+
+                self.clear_gradients(batch_size)
+                label_scores = self(instances)
+                return
 
     def forward(self, ref=None, parameters=None):
         sentence = ref['vocab_tensor'][:, :-1]
@@ -72,8 +82,7 @@ class LanguageModel(Classifier):
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out)
-        vocab_scores = F.log_softmax(vocab_space, dim=2)
-        return vocab_scores
+        return vocab_space
 
     def make_ref(self, word_idx, feats=None):
         ref = {'vocab_tensor': torch.tensor([word_idx, -1], dtype=torch.long, device=self.device)}
@@ -87,40 +96,16 @@ class LanguageModel(Classifier):
         return ref, target
 
     def clear_gradients(self, batch_size):
-        super(LanguageModel, self).clear_gradients()
+        self.zero_grad()
         self.hidden = self.init_hidden(batch_size)
-
-    def generate(self, start_word='<bos>', feats=None):
-        self.eval()
-        sentence = []
-        word_idx = self.word2idx[start_word]
-        end_idx = self.word2idx['<eos>']
-
-        with torch.no_grad():
-            self.init_hidden()
-
-            while word_idx != end_idx and len(sentence) < 30:
-                ref = self.make_ref(word_idx, feats)
-                output = self(ref)
-                word_idx = torch.argmax(output)
-                sentence.append(self.ind2word[word_idx])
-
-        return sentence
-
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')
-    parser.add_argument('mode', help='train/test')
-    parser.add_argument('checkpoint_prefix',
-                        help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
-
     parser.add_argument('--img_root', help='path to the image directory', default='pyutils/refer_python3/data/images/')
     parser.add_argument('--data_root', help='path to data directory', default='pyutils/refer_python3/data')
     parser.add_argument('--dataset', help='dataset name', default='refcocog')
     parser.add_argument('--splitBy', help='team that made the dataset splits', default='google')
-    parser.add_argument('--epochs', dest='epochs', type=int, default=1,
-                        help='Number of epochs to train (Default: 1)')
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
@@ -136,17 +121,7 @@ if __name__ == "__main__":
 
     refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda)
 
-    checkpt_file = LanguageModel.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 0, args.dropout)
-    if (os.path.isfile(checkpt_file)):
-        model = LanguageModel(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
-    else:
-        model = LanguageModel(vocab=vocab, hidden_dim=args.hidden_dim,
-                                  use_cuda=use_cuda, dropout=args.dropout)
+    model = LanguageModel(vocab=vocab, hidden_dim=args.hidden_dim, use_cuda=use_cuda, dropout=args.dropout)
 
-    if(args.mode == 'train'):
-        print("Start Training")
-        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image':False})
+    total_loss = model.run_debug(refer)
 
-    if(args.mode == 'test'):
-        print("Start Testing")
-        print(model.generate([]))
