@@ -76,6 +76,7 @@ class ReferExpressionDataset(Dataset):
             img_name = os.path.join(self.root_dir,
                                     self.refer.Imgs[ref['image_id']]['file_name'])
             image = Image.open(img_name)
+            w, h = image.size
 
             if image.mode != "RGB":
                 image = image.convert("RGB")
@@ -85,8 +86,6 @@ class ReferExpressionDataset(Dataset):
 
             # Position features
             # [left_x / W, top_y/H, right_x/W, bottom_y/H, size_bbox/size_image]
-            w, h = image.size
-
             pos = torch.tensor([bbox[0]/w, (bbox[1]+bbox[3])/h, (bbox[0]+bbox[2])/w, bbox[1]/h, (bbox[2]*bbox[3])/(w*h)], dtype=torch.float, device=self.device)
 
             sample = {'image': image, 'object': object, 'pos': pos}
