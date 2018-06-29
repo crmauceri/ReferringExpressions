@@ -79,6 +79,7 @@ class Classifier(nn.Module):
 
             self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch)
 
+            self.clear_gradients(batch_size=1)
             self.save_model(checkpt_prefix, {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
