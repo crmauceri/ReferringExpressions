@@ -1,6 +1,6 @@
 import os
 from PIL import Image
-
+from collections import defaultdict
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
@@ -55,7 +55,8 @@ class ReferExpressionDataset(Dataset):
         elif split == 'val':
             return len(self.val_index)
 
-    def getItem(self, idx, split=None, display_image=False):
+    def getItem(self, idx, split=None, display_image=False, n_contrast_object=0):
+        sample = {}
 
         if split is None:
             sent_idx = self.index[idx]
@@ -67,12 +68,12 @@ class ReferExpressionDataset(Dataset):
             sent_idx = self.val_index[idx]
 
         sentence = self.refer.Sents[sent_idx]['vocab_tensor']
-
-        ref = self.refer.sentToRef[sent_idx]
-        bbox = torch.tensor(self.refer.Anns[ref['ann_id']]['bbox'], dtype=torch.float)
-
+        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
+        sample['vocab_tensor'] = sentence
 
         if self.use_image or display_image:
+            ref = self.refer.sentToRef[sent_idx]
+
             img_name = os.path.join(self.root_dir,
                                     self.refer.Imgs[ref['image_id']]['file_name'])
             image = Image.open(img_name)
@@ -81,21 +82,22 @@ class ReferExpressionDataset(Dataset):
             if image.mode != "RGB":
                 image = image.convert("RGB")
 
-            object = self.img_normalize(self.standarizeImageFormat(image, bbox))
-            image = self.img_normalize(self.standarizeImageFormat(image))
+            bbox = self.refer.Anns[ref['ann_id']]['bbox']
+            sample['object'], sample['pos'] = self.getObject(image, bbox)
 
-            # Position features
-            # [left_x / W, top_y/H, right_x/W, bottom_y/H, size_bbox/size_image]
-            pos = torch.tensor([bbox[0]/w, (bbox[1]+bbox[3])/h, (bbox[0]+bbox[2])/w, bbox[1]/h, (bbox[2]*bbox[3])/(w*h)], dtype=torch.float, device=self.device)
+            if n_contrast_object > 0:
+                annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
+                bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if id != ref['ann_id']]
+                sample['contrast'] = []
+                for i in range(min(n_contrast_object, len(bboxes))):
+                    sample['contrast'].append({})
+                    sample['contrast'][i]['object'], sample['contrast'][i]['pos'] = self.getObject(image, bboxes[i])
 
-            sample = {'image': image, 'object': object, 'pos': pos}
+            image = self.standarizeImageFormat(image)
+            sample['image'] = self.img_normalize(image)
             if display_image:
                 sample['PIL'] = image
-        else:
-            sample = {}
 
-        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
-        sample['vocab_tensor'] = sentence
         return sample
 
     def sent2vocab(self, word2idx):
@@ -120,10 +122,10 @@ class ReferExpressionDataset(Dataset):
 
         #Crop if bbox is smaller than image size
         if bbox is not None:
-            width = int(bbox[2].item())
-            height = int(bbox[3].item())
-            bottom = int(bbox[1].item())
-            left = int(bbox[0].item())
+            width = int(bbox[2])
+            height = int(bbox[3])
+            bottom = int(bbox[1])
+            left = int(bbox[0])
 
             image = image.crop((left, bottom, left+width, bottom+height))
 
@@ -139,3 +141,13 @@ class ReferExpressionDataset(Dataset):
         pad_image.paste(image, (int((self.image_size-new_size[0])/2), int((self.image_size-new_size[1])/2)))
 
         return pad_image
+
+    def getObject(self, image, bbox):
+        w, h = image.size
+
+        pos = torch.tensor(
+            [bbox[0] / w, (bbox[1] + bbox[3]) / h, (bbox[0] + bbox[2]) / w, bbox[1] / h, (bbox[2] * bbox[3]) / (w * h)],
+            dtype=torch.float, device=self.device)
+        object = self.img_normalize(self.standarizeImageFormat(image, bbox))
+
+        return object, pos
