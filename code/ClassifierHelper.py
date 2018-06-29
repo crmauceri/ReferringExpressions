@@ -66,17 +66,16 @@ class Classifier(nn.Module):
 
             for i_batch, sample_batched in enumerate(tqdm(dataloader, desc='{}rd epoch'.format(epoch))):
 
-                if i_batch > 2380:
-                    instances, targets = self.trim_batch(sample_batched)
-                    self.clear_gradients(batch_size)
+                instances, targets = self.trim_batch(sample_batched)
+                self.clear_gradients(batch_size)
 
-                    label_scores = self(instances, parameters)
-                    loss = self.loss_function(label_scores.permute(1, 2, 0), targets)
+                label_scores = self(instances, parameters)
+                loss = self.loss_function(label_scores.permute(1, 2, 0), targets)
 
-                    loss.backward()
-                    optimizer.step()
+                loss.backward()
+                optimizer.step()
 
-                    self.total_loss[epoch] += loss.item()
+                self.total_loss[epoch] += loss.item()
 
             self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch)
 

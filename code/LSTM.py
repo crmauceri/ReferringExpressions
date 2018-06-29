@@ -32,7 +32,7 @@ class LanguageModel(Classifier):
         self.word2idx = dict(zip(vocab, range(len(vocab))))
         self.ind2word = vocab
         self.vocab_dim = len(vocab)
-        self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim, padding_idx=0)
+        self.embedding = torch.nn.Embedding(self.vocab_dim+1, self.embed_dim, padding_idx=0)
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
         self.dropout1 = nn.Dropout(p=self.dropout_p)
