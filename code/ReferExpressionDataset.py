@@ -4,12 +4,14 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from PIL.ImageStat import Stat
 
 from refer_python3.refer import REFER
 
 class ReferExpressionDataset(Dataset):
 
-    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform=None, use_image=False):
+    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
+                             image_std=[0.229, 0.224, 0.225], use_image=False):
 
         if use_cuda:
             self.device = torch.device('cuda')
@@ -24,9 +26,13 @@ class ReferExpressionDataset(Dataset):
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.sent2vocab(self.word2idx)
 
-
         self.root_dir = imagedir
-        self.img_transform = transform
+        self.image_size = transform_size
+        self.img_normalize = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=image_mean,
+                                 std=image_std)
+            ])
 
         self.index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']]
         self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'train']
@@ -74,7 +80,8 @@ class ReferExpressionDataset(Dataset):
             if image.mode != "RGB":
                 image = image.convert("RGB")
 
-            object = self.img_transform(cropBoundingBox(image, bbox))
+            object = self.img_normalize(self.standarizeImageFormat(image, bbox))
+            image = self.img_normalize(self.standarizeImageFormat(image))
 
             # Position features
             # [left_x / W, top_y/H, right_x/W, bottom_y/H, size_bbox/size_image]
@@ -82,7 +89,7 @@ class ReferExpressionDataset(Dataset):
 
             pos = torch.tensor([bbox[0]/w, (bbox[1]+bbox[3])/h, (bbox[0]+bbox[2])/w, bbox[1]/h, (bbox[2]*bbox[3])/(w*h)], dtype=torch.float, device=self.device)
 
-            sample = {'image': self.img_transform(image), 'object': object, 'pos': pos}
+            sample = {'image': image, 'object': object, 'pos': pos}
             if display_image:
                 sample['PIL'] = image
         else:
@@ -110,15 +117,26 @@ class ReferExpressionDataset(Dataset):
             padding = [0.0]*(self.max_sent_len - len(sentence['vocab']))
             sentence['vocab_tensor'] = torch.tensor(padding + sentence['vocab'], dtype=torch.long, device=self.device)
 
+    def standarizeImageFormat(self, image, bbox=None):
 
-#Helper function
-def cropBoundingBox(image, bbox):
+        #Crop if bbox is smaller than image size
+        if bbox is not None:
+            width = int(bbox[2].item())
+            height = int(bbox[3].item())
+            bottom = int(bbox[1].item())
+            left = int(bbox[0].item())
 
-    height, width = bbox[2:]
+            image = image.crop((left, bottom, left+width, bottom+height))
 
-    bottom = int(bbox[1].item())
-    left = int(bbox[0].item())
+        #Scale to self.image_size
+        width, height = image.size
+        ratio = float(self.image_size) / max([width, height])
+        new_size = tuple([int(x*ratio) for x in [width, height]])
+        image = image.resize(new_size, Image.ANTIALIAS)
 
-    image = image.crop((left, bottom+int(height), left+int(width), bottom))
+        #Pad with mean value
+        stat = Stat(image)
+        pad_image = Image.new('RGB',  (self.image_size, self.image_size), tuple([int(x) for x in stat.mean]))
+        pad_image.paste(image, (int((self.image_size-new_size[0])/2), int((self.image_size-new_size[1])/2)))
 
-    return image
+        return pad_image
