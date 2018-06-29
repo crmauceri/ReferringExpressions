@@ -2,8 +2,6 @@ import argparse, os, re
 
 import torch
 import torchvision.models as models
-import torchvision.transforms as transforms
-import cProfile
 
 torch.manual_seed(1)
 
@@ -112,14 +110,7 @@ if __name__ == "__main__":
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    transform = transforms.Compose([
-        transforms.Resize(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda,
-                                   transform=transform, use_image=True)
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda, use_image=True)
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
@@ -131,7 +122,6 @@ if __name__ == "__main__":
     if args.mode == 'train':
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
-        #cProfile.run('model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={"use_image": True})')
 
     if args.mode == 'test':
         print("Start Testing")
