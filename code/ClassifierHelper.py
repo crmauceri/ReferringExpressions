@@ -105,7 +105,7 @@ class Classifier(nn.Module):
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
             with torch.no_grad():
                 label_scores = self(instance, parameters)
-                targets = self.targets(instance)
+                instances, targets = self.trim_batch(instance)
                 total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(n)
 
@@ -114,14 +114,14 @@ class Classifier(nn.Module):
 
     def clear_gradients(self, batch_size=None):
         self.zero_grad()
-
-    def make_prediction(self, instances, parameters):
-        self.eval()
-        predictions = []
-        with torch.no_grad():
-            for i in tqdm(range(len(instances))):
-                instance = instances[i]
-                tag_scores = self(instance, parameters)
-                val, index = tag_scores.data.max(0)
-                predictions.append((index[0], val[0]))
-        return predictions
+    #
+    # def make_prediction(self, instances, parameters):
+    #     self.eval()
+    #     predictions = []
+    #     with torch.no_grad():
+    #         for i in tqdm(range(len(instances))):
+    #             instance = instances[i]
+    #             tag_scores = self(instance, parameters)
+    #             val, index = tag_scores.data.max(0)
+    #             predictions.append((index[0], val[0]))
+    #     return predictions
