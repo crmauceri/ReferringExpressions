@@ -69,8 +69,10 @@ class Classifier(nn.Module):
                 instances, targets = self.trim_batch(sample_batched)
                 self.clear_gradients(batch_size=targets.size()[0])
 
+                loss = 0
                 label_scores = self(instances, parameters)
-                loss = self.loss_function(label_scores, targets)
+                for step in range(targets.size()[1]):
+                    loss += self.loss_function(label_scores[:, step, :], targets[:, step])
 
                 loss.backward()
                 optimizer.step()
@@ -103,10 +105,14 @@ class Classifier(nn.Module):
 
         total_loss = 0
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
+            self.clear_gradients(batch_size=1)
             with torch.no_grad():
-                label_scores = self(instance, parameters)
                 instances, targets = self.trim_batch(instance)
-                total_loss += self.loss_function(label_scores, targets)
+                self.clear_gradients(batch_size=targets.size()[0])
+
+                label_scores = self(instances, parameters)
+                for step in range(targets.size()[1]):
+                    total_loss += self.loss_function(label_scores[:, step, :], targets[:, step])
         return total_loss/float(n)
 
     def trim_batch(self, instance):
