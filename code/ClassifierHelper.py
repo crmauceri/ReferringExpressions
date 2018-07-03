@@ -70,7 +70,7 @@ class Classifier(nn.Module):
                 self.clear_gradients(batch_size=targets.size()[0])
 
                 label_scores = self(instances, parameters)
-                loss = self.loss_function(label_scores.permute(1, 2, 0), targets)
+                loss = self.loss_function(label_scores, targets)
 
                 loss.backward()
                 optimizer.step()

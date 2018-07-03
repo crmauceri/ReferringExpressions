@@ -1,13 +1,11 @@
-import argparse, os, re
+import argparse, os
 
 import torch
-import torchvision.models as models
+import torch.nn as nn
 
 torch.manual_seed(1)
 
 from MaoEtAl_baseline import LanguagePlusImage
-from TruncatedImageNetworks import TruncatedVGGorAlex
-from ClassifierHelper import Classifier
 from ReferExpressionDataset import ReferExpressionDataset
 
 from refer_python3.refer import REFER
@@ -15,19 +13,23 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguagePlusImage_Contrast(LanguagePlusImage):
 
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, use_cuda=False):
+        super(LanguagePlusImage_Contrast, self).__init__(checkpt_file, vocab, hidden_dim, dropout, use_cuda)
+
+        self.loss_function = MMI_softmax_Loss()
+
     def forward(self, ref, parameters):
         feats, contrast = self.image_forward(ref)
 
         #Input to LanguageModel
         ref['feats'] = feats
-        correct_embedding = self.wordnet(ref=ref)
+        embedding = self.wordnet(ref=ref)
 
-        contrast_embedding = []
-        for vector in contrast:
-            ref['feats'] = vector
-            contrast_embedding.append(self.wordnet(ref=ref))
+        if self.training:
+            ref['feats'] = contrast
+            embedding = torch.cat([embedding, self.wordnet(ref=ref)], 1)
 
-        return correct_embedding, contrast_embedding
+        return embedding
 
     def image_forward(self, ref):
         # Global feature
@@ -46,17 +48,41 @@ class LanguagePlusImage_Contrast(LanguagePlusImage):
         # [top_left_x / W, top_left_y/H, bottom_left_x/W, bottom_left_y/H, size_bbox/size_image]
         pos = ref['pos']
 
-        # Contrast objects
-        contrast = ref['contrast']
-        contrast_out = []
-        for item in contrast:
-            contrast_item = item['object']
+        if self.training:
+            # Contrast objects
+            contrast = ref['contrast']
             if self.use_cuda:
-                contrast_item = contrast_item.cuda()
-            contrast_out.append(torch.cat([image_out, self.imagenet(contrast_item), item['pos']], 1))
+                contrast_item = contrast['object'].cuda()
+            else:
+                contrast_item = contrast['object']
+            contrast_out = torch.cat([image_out, self.imagenet(contrast_item), contrast['pos']], 1)
 
         # Concatenate image representations
         return torch.cat([image_out, object_out, pos], 1), contrast_out
+
+
+class MMI_MM_Loss(nn.Module):
+    def __init__(self):
+        super(MMI_MM_Loss, self).__init__()
+        self.NNLLoss = nn.NLLLoss()
+
+    def forward(self, embeddings, targets):
+        #TODO
+        return self.NNLLoss(embeddings[0], targets)
+
+
+class MMI_softmax_Loss(nn.Module):
+    def __init__(self):
+        super(MMI_softmax_Loss, self).__init__()
+        self.NNLLoss = nn.NLLLoss()
+
+    def forward(self, embeddings, targets):
+        #First half is positive examples, second have is contrast examples
+        dims = embeddings.size()
+        examples = embeddings[:int(dims[0]/2), :, :]
+        contrast = embeddings[int(dims[0]/2):, :, :]
+        #Need multiple contrast examples
+        return self.NNLLoss(examples / torch.sum(contrast, 3), targets)
 
 if __name__ == "__main__":
 
@@ -84,13 +110,14 @@ if __name__ == "__main__":
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda, use_image=True)
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda,
+                                   use_image=True, use_contrast_object=True)
 
-    checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
+    checkpt_file = LanguagePlusImage_Contrast.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
-        model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
+        model = LanguagePlusImage_Contrast(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
     else:
-        model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim,
+        model = LanguagePlusImage_Contrast(vocab=vocab, hidden_dim=args.hidden_dim,
                               use_cuda=use_cuda, dropout=args.dropout)
 
     if args.mode == 'train':
