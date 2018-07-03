@@ -26,8 +26,9 @@ class LanguagePlusImage_Contrast(LanguagePlusImage):
         embedding = self.wordnet(ref=ref)
 
         if self.training:
-            ref['feats'] = contrast
-            embedding = torch.cat([embedding, self.wordnet(ref=ref)], 1)
+            for object in contrast:
+                ref['feats'] = object
+                embedding = torch.cat([embedding, self.wordnet(ref=ref)], 0)
 
         return embedding
 
@@ -48,14 +49,15 @@ class LanguagePlusImage_Contrast(LanguagePlusImage):
         # [top_left_x / W, top_left_y/H, bottom_left_x/W, bottom_left_y/H, size_bbox/size_image]
         pos = ref['pos']
 
+        contrast_out = []
         if self.training:
             # Contrast objects
-            contrast = ref['contrast']
-            if self.use_cuda:
-                contrast_item = contrast['object'].cuda()
-            else:
-                contrast_item = contrast['object']
-            contrast_out = torch.cat([image_out, self.imagenet(contrast_item), contrast['pos']], 1)
+            for contrast in ref['contrast']:
+                if self.use_cuda:
+                    contrast_item = contrast['object'].cuda()
+                else:
+                    contrast_item = contrast['object']
+                contrast_out.append(torch.cat([image_out, self.imagenet(contrast_item), contrast['pos']], 1))
 
         # Concatenate image representations
         return torch.cat([image_out, object_out, pos], 1), contrast_out
@@ -77,12 +79,14 @@ class MMI_softmax_Loss(nn.Module):
         self.NNLLoss = nn.NLLLoss()
 
     def forward(self, embeddings, targets):
-        #First half is positive examples, second have is contrast examples
-        dims = embeddings.size()
-        examples = embeddings[:int(dims[0]/2), :, :]
-        contrast = embeddings[int(dims[0]/2):, :, :]
-        #Need multiple contrast examples
-        return self.NNLLoss(examples / torch.sum(contrast, 3), targets)
+        #First half is positive examples, second half is contrast examples
+        dim = targets.size()[0]
+        examples = embeddings[:dim, :]
+        contrast = torch.zeros(examples.size())
+        for i in range(dim, embeddings.size()[0]):
+            contrast[i % dim, :] += embeddings[i, :]
+        #
+        return self.NNLLoss(examples / contrast, targets)
 
 if __name__ == "__main__":
 
@@ -111,7 +115,7 @@ if __name__ == "__main__":
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
     refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda,
-                                   use_image=True, use_contrast_object=True)
+                                   use_image=True, n_contrast_object=2)
 
     checkpt_file = LanguagePlusImage_Contrast.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):

@@ -10,7 +10,7 @@ from refer_python3.refer import REFER
 class ReferExpressionDataset(Dataset):
 
     def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
-                             image_std=[0.229, 0.224, 0.225], use_image=False, use_contrast_object=False):
+                             image_std=[0.229, 0.224, 0.225], use_image=False, n_contrast_object=0):
 
         if use_cuda:
             self.device = torch.device('cuda')
@@ -19,7 +19,7 @@ class ReferExpressionDataset(Dataset):
 
         self.active_split = None
         self.use_image = use_image
-        self.use_contrast_object = use_contrast_object
+        self.n_contrast_object = n_contrast_object
 
         self.refer = REFER(dataroot, dataset, splitBy)
         self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
@@ -85,12 +85,14 @@ class ReferExpressionDataset(Dataset):
             bbox = self.refer.Anns[ref['ann_id']]['bbox']
             sample['object'], sample['pos'] = self.getObject(image, bbox)
 
-            if self.use_contrast_object:
+            if self.n_contrast_object > 0:
                 annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
                 bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if id != ref['ann_id']]
-                i = random.randint(0, len(bboxes)-1)
-                sample['contrast'] = {}
-                sample['contrast']['object'], sample['contrast']['pos'] = self.getObject(image, bboxes[i])
+                bboxes = random.sample(bboxes, min(self.n_contrast_object, len(bboxes)))
+                sample['contrast'] = []
+                for box in bboxes:
+                    object, pos = self.getObject(image, box)
+                    sample['contrast'].append({'object':object, 'pos':pos})
 
             image = self.standarizeImageFormat(image)
             sample['image'] = self.img_normalize(image)
