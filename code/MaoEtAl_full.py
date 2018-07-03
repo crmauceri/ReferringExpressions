@@ -77,12 +77,13 @@ class MMI_softmax_Loss(nn.Module):
     def __init__(self):
         super(MMI_softmax_Loss, self).__init__()
         self.NNLLoss = nn.NLLLoss()
+        self.device = torch.device('cuda')
 
     def forward(self, embeddings, targets):
         #First half is positive examples, second half is contrast examples
         dim = targets.size()[0]
         examples = embeddings[:dim, :]
-        contrast = torch.zeros(examples.size())
+        contrast = torch.zeros(examples.size(), device=self.device, dtype=torch.float)
         for i in range(dim, embeddings.size()[0]):
             contrast[i % dim, :] += embeddings[i, :]
         #
