@@ -70,7 +70,10 @@ class MMI_MM_Loss(nn.Module):
 
     def forward(self, embeddings, targets):
         #TODO
-        return self.NNLLoss(embeddings[0], targets)
+        dim = targets.size()[0]
+        examples = embeddings[:dim, :]
+        contrast = torch.zeros(examples.size())
+        return self.NNLLoss(examples, targets)
 
 
 class MMI_softmax_Loss(nn.Module):
