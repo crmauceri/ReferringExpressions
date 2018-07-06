@@ -47,13 +47,13 @@ class ReferExpressionDataset(Dataset):
 
     def length(self, split=None):
         if split is None:
-            return len(self.index)/10
+            return int(len(self.index)/10)
         elif split == 'train':
-            return len(self.train_index)/10
+            return int(len(self.train_index)/10)
         elif split == 'test':
-            return len(self.test_index)/10
+            return int(len(self.test_index)/10)
         elif split == 'val':
-            return len(self.val_index)/10
+            return int(len(self.val_index)/10)
 
     def getItem(self, idx, split=None, display_image=False):
         sample = {}
