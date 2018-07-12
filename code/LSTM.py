@@ -29,8 +29,8 @@ class LanguageModel(Classifier):
             self.feats_dim = additional_feat
 
         #Word Embeddings
-        self.word2idx = dict(zip(vocab, range(len(vocab))))
-        self.ind2word = vocab
+        self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
+        self.ind2word = ['<>'] + vocab
         self.vocab_dim = len(vocab)+1
         self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim, padding_idx=0)
 
@@ -76,7 +76,7 @@ class LanguageModel(Classifier):
         return vocab_scores
 
     def make_ref(self, word_idx, feats=None):
-        ref = {'vocab_tensor': torch.tensor([word_idx, -1], dtype=torch.long, device=self.device)}
+        ref = {'vocab_tensor': torch.tensor([word_idx, -1], dtype=torch.long, device=self.device).unsqueeze(0)}
         if feats is not None:
             ref['feats'] = feats
         return ref
@@ -97,7 +97,7 @@ class LanguageModel(Classifier):
         end_idx = self.word2idx['<eos>']
 
         with torch.no_grad():
-            self.init_hidden()
+            self.init_hidden(1)
 
             while word_idx != end_idx and len(sentence) < 30:
                 ref = self.make_ref(word_idx, feats)

@@ -74,15 +74,16 @@ class LanguagePlusImage(Classifier):
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
-        return '{}_hidden{}_feats{}_dropout{}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
+        return '{}_hidden{}_feats{}_dropout{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
 
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def generate(self, start_word, ref):
         self.eval()
-        feats = self.image_forward(ref)
-        return self.wordnet.generate(start_word, feats)
+        with torch.no_grad():
+            feats = self.image_forward(ref)
+            return self.wordnet.generate(start_word, feats)
 
 if __name__ == "__main__":
 
@@ -127,8 +128,9 @@ if __name__ == "__main__":
 
     if args.mode == 'test':
         print("Start Testing")
+        generated_exp = model.run_generate(refer)
         for i in range(10, 20):
-            item = refer.getItem(i, split='val', use_image=True, display_image=True)
+            item = refer.getItem(i, split='val', display_image=True)
             item['PIL'].show()
-            print(model.generate("<bos>", item))
+            print(generated_exp[i])
             input('Any key to continue')

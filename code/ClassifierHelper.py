@@ -9,6 +9,8 @@ import torch.optim as optim
 
 torch.manual_seed(1)
 
+DEBUG = True
+
 class Classifier(nn.Module):
     def __init__(self, use_cuda=False):
         super(Classifier, self).__init__()
@@ -43,7 +45,7 @@ class Classifier(nn.Module):
         pass
 
     def save_model(self, checkpt_prefix, params):
-        print("=> saving checkpoint '{}'".format(checkpt_prefix))
+        print("=> saving checkpoint '{}'".format(self.checkpt_file(checkpt_prefix)))
         torch.save(params, self.checkpt_file(checkpt_prefix))
 
     def checkpt_file(self, checkpt_prefix):
@@ -71,8 +73,14 @@ class Classifier(nn.Module):
 
                 loss = 0
                 label_scores = self(instances, parameters)
+
                 for step in range(targets.size()[1]):
                     loss += self.loss_function(label_scores[:, step, :], targets[:, step])
+
+                if DEBUG:
+                    print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
+                    print([self.wordnet.ind2word[torch.argmax(label_scores[0, i, :])] for i in range(instances['vocab_tensor'].size()[1]-1)])
+                    print(loss)
 
                 loss.backward()
                 optimizer.step()
@@ -118,16 +126,19 @@ class Classifier(nn.Module):
     def trim_batch(self, instance):
         pass
 
+    def run_generate(self, refer_dataset, split=None, parameters=None):
+        refer_dataset.active_split = split
+        n = len(refer_dataset)
+        dataloader = DataLoader(refer_dataset)
+
+        generated_exp = [0]*len(refer_dataset)
+        for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
+            generated_exp[k] = self.generate("<bos>", instance)
+
+        return generated_exp
+
+    def generate(self, start_word, instance):
+        pass
+
     def clear_gradients(self, batch_size=None):
         self.zero_grad()
-    #
-    # def make_prediction(self, instances, parameters):
-    #     self.eval()
-    #     predictions = []
-    #     with torch.no_grad():
-    #         for i in tqdm(range(len(instances))):
-    #             instance = instances[i]
-    #             tag_scores = self(instance, parameters)
-    #             val, index = tag_scores.data.max(0)
-    #             predictions.append((index[0], val[0]))
-    #     return predictions

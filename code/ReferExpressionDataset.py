@@ -47,13 +47,13 @@ class ReferExpressionDataset(Dataset):
 
     def length(self, split=None):
         if split is None:
-            return int(len(self.index)/10)
+            return len(self.index)
         elif split == 'train':
-            return int(len(self.train_index)/10)
+            return len(self.train_index)
         elif split == 'test':
-            return int(len(self.test_index)/10)
+            return len(self.test_index)
         elif split == 'val':
-            return int(len(self.val_index)/10)
+            return len(self.val_index)
 
     def getItem(self, idx, split=None, display_image=False):
         sample = {}
@@ -105,7 +105,6 @@ class ReferExpressionDataset(Dataset):
         begin_index = word2idx['<bos>']
         end_index = word2idx['<eos>']
         unk_index = word2idx['<unk>']
-
 
         for sentence in self.refer.Sents.values():
             sentence['vocab'] = [begin_index]
