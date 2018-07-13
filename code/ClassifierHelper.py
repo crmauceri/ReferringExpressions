@@ -100,20 +100,18 @@ class Classifier(nn.Module):
 
             if epoch % 10 == 0:
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', parameters)
+                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', parameters, batch_size)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
-    def run_testing(self, refer_dataset, split=None, parameters=None):
+    def run_testing(self, refer_dataset, split=None, parameters=None, batch_size=4):
         self.eval()
         refer_dataset.active_split = split
-        n = len(refer_dataset)
         dataloader = DataLoader(refer_dataset)
 
         total_loss = 0
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
-            self.clear_gradients(batch_size=1)
             with torch.no_grad():
                 instances, targets = self.trim_batch(instance)
                 self.clear_gradients(batch_size=targets.size()[0])
@@ -121,7 +119,7 @@ class Classifier(nn.Module):
                 label_scores = self(instances, parameters)
                 for step in range(targets.size()[1]):
                     total_loss += self.loss_function(label_scores[:, step, :], targets[:, step])
-        return total_loss/float(n)
+        return total_loss/float(k)
 
     def trim_batch(self, instance):
         pass

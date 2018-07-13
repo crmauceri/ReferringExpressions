@@ -12,6 +12,11 @@ from ReferExpressionDataset import ReferExpressionDataset
 
 from refer_python3.refer import REFER
 
+# As described in "Generation and comprehension of unambiguous object descriptions."
+# Mao, Junhua, et al.
+# CVPR 2016
+# Implemented by Cecilia Mauceri
+
 #Network Definition
 class LanguagePlusImage(Classifier):
 
@@ -102,6 +107,8 @@ if __name__ == "__main__":
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
+    parser.add_argument('--batch_size', dest='batch_size', type=float, default=16,
+                        help='Training batch size')
 
     args = parser.parse_args()
 
@@ -124,7 +131,7 @@ if __name__ == "__main__":
     if args.mode == 'train':
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
-                                        learning_rate=args.learningrate)
+                                        learning_rate=args.learningrate, batch_size=args.batch_size)
 
     if args.mode == 'test':
         print("Start Testing")
