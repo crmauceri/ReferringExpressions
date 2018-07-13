@@ -113,6 +113,10 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
+    parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
+    parser.add_argument('--batch_size', dest='batch_size', type=float, default=16,
+                        help='Training batch size')
+
 
     args = parser.parse_args()
 
@@ -135,7 +139,8 @@ if __name__ == "__main__":
 
     if args.mode == 'train':
         print("Start Training")
-        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True})
+        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
+                                        learning_rate=args.learningrate, batch_size=args.batch_size)
 
     if args.mode == 'test':
         print("Start Testing")
