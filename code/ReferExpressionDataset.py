@@ -9,10 +9,10 @@ from refer_python3.refer import REFER
 
 class ReferExpressionDataset(Dataset):
 
-    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, use_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
+    def __init__(self, imagedir, dataroot, dataset, splitBy, vocab, disable_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
                              image_std=[0.229, 0.224, 0.225], use_image=False, n_contrast_object=0):
 
-        if use_cuda:
+        if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')

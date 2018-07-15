@@ -3,7 +3,6 @@ import os.path, argparse, re, sys
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
-import torch.nn.functional as F
 
 torch.manual_seed(1)
 
@@ -13,9 +12,8 @@ from ReferExpressionDataset import ReferExpressionDataset
 #Network Definition
 class LanguageModel(Classifier):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0,
-            use_cuda=False, additional_feat=0):
-        super(LanguageModel, self).__init__(use_cuda)
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, additional_feat=0):
+        super(LanguageModel, self).__init__()
 
         if checkpt_file is not None:
             m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
@@ -72,8 +70,7 @@ class LanguageModel(Classifier):
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out)
-        vocab_scores = F.log_softmax(vocab_space, dim=2)
-        return vocab_scores
+        return vocab_space
 
     def make_ref(self, word_idx, feats=None):
         ref = {'vocab_tensor': torch.tensor([word_idx, -1], dtype=torch.long, device=self.device).unsqueeze(0)}

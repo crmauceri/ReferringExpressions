@@ -2,11 +2,13 @@ import argparse, os
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 torch.manual_seed(1)
 
 from MaoEtAl_baseline import LanguagePlusImage
 from ReferExpressionDataset import ReferExpressionDataset
+from ClassifierHelper import SequenceLoss
 
 from refer_python3.refer import REFER
 
@@ -18,8 +20,8 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguagePlusImage_Contrast(LanguagePlusImage):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, use_cuda=False):
-        super(LanguagePlusImage_Contrast, self).__init__(checkpt_file, vocab, hidden_dim, dropout, use_cuda)
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0):
+        super(LanguagePlusImage_Contrast, self).__init__(checkpt_file, vocab, hidden_dim, dropout)
 
         self.loss_function = MMI_softmax_Loss()
 
@@ -28,12 +30,12 @@ class LanguagePlusImage_Contrast(LanguagePlusImage):
 
         #Input to LanguageModel
         ref['feats'] = feats
-        embedding = self.wordnet(ref=ref)
+        embedding = F.softmax(self.wordnet(ref=ref), dim=2)
 
         if self.training:
             for object in contrast:
                 ref['feats'] = object
-                embedding = torch.cat([embedding, self.wordnet(ref=ref)], 0)
+                embedding = torch.cat([embedding, F.softmax(self.wordnet(ref=ref), dim=2)], 0)
 
         return embedding
 
@@ -82,20 +84,41 @@ class MMI_MM_Loss(nn.Module):
 
 
 class MMI_softmax_Loss(nn.Module):
-    def __init__(self):
+    def __init__(self, disable_cuda=False):
         super(MMI_softmax_Loss, self).__init__()
-        self.NNLLoss = nn.NLLLoss()
-        self.device = torch.device('cuda')
+        self.Loss = SequenceLoss(nn.NLLLoss())
+        self.Tanh = nn.Tanh()
+
+        if not disable_cuda and torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
 
     def forward(self, embeddings, targets):
-        #First half is positive examples, second half is contrast examples
         dim = targets.size()[0]
         examples = embeddings[:dim, :]
         contrast = torch.zeros(examples.size(), device=self.device, dtype=torch.float)
         for i in range(dim, embeddings.size()[0]):
             contrast[i % dim, :] += embeddings[i, :]
+
+        weighted = torch.log(self.Tanh(torch.div(examples, contrast)))
+        loss = self.Loss(weighted, targets)
+        # print(loss)
+
+        # loss = torch.zeros(dim, device=self.device, dtype=torch.float)
+        # for step in range(targets.size()[1]):
+        #     for instance in range(dim):
+        #         loss[instance] += torch.log(self.Tanh(examples[instance, step, targets[instance, step]] / contrast[instance, step, targets[instance, step]]))
+        # loss = -1 * torch.sum(loss)
+        # print(loss)
         #
-        return self.NNLLoss(examples / contrast, targets)
+        # contrast_loss = self.Loss(torch.log(contrast), targets)
+        # print(contrast_loss)
+        #
+        # example_loss = self.Loss(torch.log(examples), targets)
+        # print(example_loss)
+
+        return loss
 
 if __name__ == "__main__":
 
@@ -114,33 +137,30 @@ if __name__ == "__main__":
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
-    parser.add_argument('--batch_size', dest='batch_size', type=float, default=16,
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
                         help='Training batch size')
 
 
     args = parser.parse_args()
-
-    use_cuda = torch.cuda.is_available()
 
     with open('vocab_file.txt', 'r') as f:
         vocab = f.read().split()
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda,
-                                   use_image=True, n_contrast_object=2)
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=2)
 
     checkpt_file = LanguagePlusImage_Contrast.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
-        model = LanguagePlusImage_Contrast(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
+        model = LanguagePlusImage_Contrast(checkpt_file=checkpt_file, vocab=vocab)
     else:
-        model = LanguagePlusImage_Contrast(vocab=vocab, hidden_dim=args.hidden_dim,
-                              use_cuda=use_cuda, dropout=args.dropout)
+        model = LanguagePlusImage_Contrast(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
 
     if args.mode == 'train':
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
                                         learning_rate=args.learningrate, batch_size=args.batch_size)
+        #total_loss = model.run_testing(refer, split='train', parameters={'use_image': True})
 
     if args.mode == 'test':
         print("Start Testing")

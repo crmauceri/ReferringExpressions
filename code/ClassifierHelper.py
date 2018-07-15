@@ -12,18 +12,19 @@ torch.manual_seed(1)
 DEBUG = True
 
 class Classifier(nn.Module):
-    def __init__(self, use_cuda=False):
+    def __init__(self, disable_cuda=False):
         super(Classifier, self).__init__()
-        self.use_cuda = use_cuda
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
-        self.loss_function = nn.NLLLoss()
+        self.loss_function = SequenceLoss(nn.CrossEntropyLoss)
 
-        if self.use_cuda:
+        if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
+            self.use_cuda = True
         else:
             self.device = torch.device('cpu')
+            self.use_cuda = False
 
     def forward(self, instance, parameters):
         pass
@@ -73,17 +74,15 @@ class Classifier(nn.Module):
 
                 loss = 0
                 label_scores = self(instances, parameters)
-
-                for step in range(targets.size()[1]):
-                    loss += self.loss_function(label_scores[:, step, :], targets[:, step])
+                loss += self.loss_function(label_scores, targets)
 
                 if DEBUG:
                     print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
                     print([self.wordnet.ind2word[torch.argmax(label_scores[0, i, :])] for i in range(instances['vocab_tensor'].size()[1]-1)])
                     print(loss)
-
-                loss.backward()
-                optimizer.step()
+                else:
+                    loss.backward()
+                    optimizer.step()
 
                 self.total_loss[epoch] += loss.item()
 
@@ -108,7 +107,7 @@ class Classifier(nn.Module):
     def run_testing(self, refer_dataset, split=None, parameters=None, batch_size=4):
         self.eval()
         refer_dataset.active_split = split
-        dataloader = DataLoader(refer_dataset)
+        dataloader = DataLoader(refer_dataset, batch_size=batch_size)
 
         total_loss = 0
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
@@ -117,8 +116,7 @@ class Classifier(nn.Module):
                 self.clear_gradients(batch_size=targets.size()[0])
 
                 label_scores = self(instances, parameters)
-                for step in range(targets.size()[1]):
-                    total_loss += self.loss_function(label_scores[:, step, :], targets[:, step])
+                total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(k)
 
     def trim_batch(self, instance):
@@ -140,3 +138,20 @@ class Classifier(nn.Module):
 
     def clear_gradients(self, batch_size=None):
         self.zero_grad()
+
+class SequenceLoss(nn.Module):
+    def __init__(self, loss_function, disable_cuda=False):
+        super(SequenceLoss, self).__init__()
+        self.Loss = loss_function
+
+        if not disable_cuda and torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+    def forward(self, embeddings, targets):
+        loss = 0.0
+        for step in range(targets.size()[1]):
+            loss += self.Loss(embeddings[:, step, :], targets[:, step])
+
+        return loss

@@ -8,6 +8,7 @@ torch.manual_seed(1)
 # Z. Yang, X. He, J. Gao et al.
 # CVPR 2015
 # Implemented by Cecilia Mauceri
+
 class AttentionModule(nn.Module):
     def __init__(self, k, d, m, use_cuda=False):
         super(AttentionModule, self).__init__()

@@ -1,6 +1,7 @@
 import argparse, os, re
 
 import torch
+import torch.nn as nn
 import torchvision.models as models
 
 torch.manual_seed(1)
@@ -20,8 +21,8 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguagePlusImage(Classifier):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, use_cuda=False):
-        super(LanguagePlusImage, self).__init__(use_cuda)
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0):
+        super(LanguagePlusImage, self).__init__()
 
         if checkpt_file is not None:
             m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
@@ -34,8 +35,7 @@ class LanguagePlusImage(Classifier):
             self.dropout_p = dropout
 
         #Text Embedding Network
-        self.wordnet = LanguageModel(vocab=vocab, additional_feat=self.feats_dim, hidden_dim=self.hidden_dim,
-                                     dropout=self.dropout_p, use_cuda=self.use_cuda)
+        self.wordnet = LanguageModel(vocab=vocab, additional_feat=self.feats_dim, hidden_dim=self.hidden_dim, dropout=self.dropout_p)
 
         #Image Embedding Network
         self.imagenet = TruncatedVGGorAlex(models.vgg16(pretrained=True), maxpool=True, fix_weights=range(40))
@@ -112,21 +112,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    use_cuda = torch.cuda.is_available()
-
     with open('vocab_file.txt', 'r') as f:
         vocab = f.read().split()
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_cuda, use_image=True)
+    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
-        model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab, use_cuda=use_cuda)
+        model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
     else:
-        model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim,
-                              use_cuda=use_cuda, dropout=args.dropout)
+        model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
 
     if args.mode == 'train':
         print("Start Training")
