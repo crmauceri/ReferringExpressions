@@ -80,9 +80,9 @@ class Classifier(nn.Module):
                     print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
                     print([self.wordnet.ind2word[torch.argmax(label_scores[0, i, :])] for i in range(instances['vocab_tensor'].size()[1]-1)])
                     print(loss)
-                else:
-                    loss.backward()
-                    optimizer.step()
+                
+                loss.backward()
+                optimizer.step()
 
                 self.total_loss[epoch] += loss.item()
 
