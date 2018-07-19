@@ -80,9 +80,13 @@ class Classifier(nn.Module):
                     print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
                     print([self.wordnet.ind2word[torch.argmax(label_scores[0, i, :])] for i in range(instances['vocab_tensor'].size()[1]-1)])
                     print(loss)
-                
+
                 loss.backward()
                 optimizer.step()
+
+                if DEBUG:
+                    self.clear_gradients(batch_size=1)
+                    print(self.generate('<bos>', feats=instances['feats'][0]))
 
                 self.total_loss[epoch] += loss.item()
 
@@ -98,6 +102,12 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % 10 == 0:
+                self.save_model('{}.checkpoint{}'.format(epoch), {
+                    'epoch': epoch,
+                    'state_dict': self.state_dict(),
+                    'total_loss': self.total_loss,
+                    'val_loss': self.val_loss})
+
                 self.val_loss.append(0)
                 self.val_loss[-1] = self.run_testing(refer_dataset, 'val', parameters, batch_size)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
@@ -129,15 +139,16 @@ class Classifier(nn.Module):
 
         generated_exp = [0]*len(refer_dataset)
         for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
-            generated_exp[k] = self.generate("<bos>", instance)
+            generated_exp[k] = self.generate("<bos>", instance=instance)
 
         return generated_exp
 
-    def generate(self, start_word, instance):
+    def generate(self, start_word, instance=None, feats=None):
         pass
 
     def clear_gradients(self, batch_size=None):
         self.zero_grad()
+
 
 class SequenceLoss(nn.Module):
     def __init__(self, loss_function, disable_cuda=False):

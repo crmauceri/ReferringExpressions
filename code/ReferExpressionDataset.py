@@ -68,7 +68,7 @@ class ReferExpressionDataset(Dataset):
             sent_idx = self.val_index[idx]
 
         sentence = self.refer.Sents[sent_idx]['vocab_tensor']
-        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
+        #sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
         sample['vocab_tensor'] = sentence
 
         if self.use_image or display_image:

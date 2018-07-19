@@ -87,8 +87,7 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).clear_gradients()
         self.hidden = self.init_hidden(batch_size)
 
-    def generate(self, start_word='<bos>', feats=None):
-        self.eval()
+    def generate(self, start_word='<bos>', instance=None, feats=None):
         sentence = []
         word_idx = self.word2idx[start_word]
         end_idx = self.word2idx['<eos>']

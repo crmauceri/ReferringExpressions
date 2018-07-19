@@ -84,11 +84,11 @@ class LanguagePlusImage(Classifier):
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p)
 
-    def generate(self, start_word, ref):
-        self.eval()
+    def generate(self, start_word, instance=None, feats=None):
         with torch.no_grad():
-            feats = self.image_forward(ref)
-            return self.wordnet.generate(start_word, feats)
+            if feats is None:
+                feats = self.image_forward(instance)
+            return self.wordnet.generate(start_word, feats=feats)
 
 if __name__ == "__main__":
 
