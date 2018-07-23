@@ -17,7 +17,7 @@ class Classifier(nn.Module):
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
-        self.loss_function = SequenceLoss(nn.CrossEntropyLoss)
+        self.loss_function = SequenceLoss(nn.CrossEntropyLoss())
 
         if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
@@ -160,9 +160,14 @@ class SequenceLoss(nn.Module):
         else:
             self.device = torch.device('cpu')
 
-    def forward(self, embeddings, targets):
-        loss = 0.0
-        for step in range(targets.size()[1]):
-            loss += self.Loss(embeddings[:, step, :], targets[:, step])
+    def forward(self, embeddings, targets, per_instance=False):
+        if per_instance:
+            loss = torch.zeros(embeddings.size()[0])
+            for step in range(targets.size()[1]):
+                loss += self.Loss(embeddings[:, step, :], targets[:, step])
+        else:
+            loss = 0.0
+            for step in range(targets.size()[1]):
+                loss += self.Loss(embeddings[:, step, :], targets[:, step])
 
         return loss

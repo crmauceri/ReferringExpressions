@@ -8,8 +8,10 @@ torch.manual_seed(1)
 
 from TruncatedImageNetworks import TruncatedVGGorAlex
 from LSTM import LanguageModel
-from ClassifierHelper import Classifier
+from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from refer_python3.refer import REFER
 
@@ -68,7 +70,7 @@ class LanguagePlusImage(Classifier):
         pos = ref['pos']
 
         # Concatenate image representations
-        return torch.cat([image_out, object_out, pos], 1)
+        return torch.cat([image_out.repeat(object_out.size()[0], 1), object_out, pos], 1)
 
     def trim_batch(self, instance):
         return self.wordnet.trim_batch(instance)
@@ -89,6 +91,34 @@ class LanguagePlusImage(Classifier):
             if feats is None:
                 feats = self.image_forward(instance)
             return self.wordnet.generate(start_word, feats=feats)
+
+    def run_comprehension(self, refer_dataset, split=None, parameters=None):
+        loss_fcn = SequenceLoss(nn.CrossEntropyLoss(reduce=False))
+        self.eval()
+        refer_dataset.active_split = split
+        dataloader = DataLoader(refer_dataset, batch_size=1)
+
+        correct = 0.0
+        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
+            with torch.no_grad():
+                for object in instance['contrast']:
+                    for key, value in object.items():
+                        instance[key] = torch.cat([instance[key], value], 0)
+                del instance['contrast']
+                instances, targets = self.trim_batch(instance)
+                self.clear_gradients(batch_size=instances['object'].size()[0])
+
+                label_scores = self(instances, parameters)
+                loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
+                if torch.argmin(loss).item() == 1:
+                    correct += 1.0
+
+        return correct/float(k)
+
+    def comprehension(self, instance, bboxes, target):
+        instances = {}
+        label_scores = self.forward(instances)
+        sum(label_scores(target))
 
 if __name__ == "__main__":
 
@@ -117,8 +147,6 @@ if __name__ == "__main__":
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
-
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
     if (os.path.isfile(checkpt_file)):
         model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
@@ -126,11 +154,19 @@ if __name__ == "__main__":
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
 
     if args.mode == 'train':
+        refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
                                         learning_rate=args.learningrate, batch_size=args.batch_size)
+    if args.mode == 'comprehend':
+        refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=float('inf'))
+        print("Start Comprehension")
+        acccuracy = model.run_comprehension(refer)
+        print("Accuracy {}".format(acccuracy))
+
 
     if args.mode == 'test':
+        refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
         print("Start Testing")
         generated_exp = model.run_generate(refer)
         for i in range(10, 20):
