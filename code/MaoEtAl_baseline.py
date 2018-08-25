@@ -1,4 +1,5 @@
 import argparse, os, re
+from csv import DictWriter
 
 import torch
 import torch.nn as nn
@@ -99,6 +100,7 @@ class LanguagePlusImage(Classifier):
         dataloader = DataLoader(refer_dataset, batch_size=1)
 
         correct = 0.0
+        output = [{'gt_sentence':[], 'imgID':0, 'objID':0, 'objClass':"", 'correct':0}]*len(refer_dataset)
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
             with torch.no_grad():
                 for object in instance['contrast']:
@@ -112,8 +114,14 @@ class LanguagePlusImage(Classifier):
                 loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
                 if torch.argmin(loss).item() == 1:
                     correct += 1.0
+                    output[k]['correct'] = 1
 
-        return correct/float(k)
+                output[k]['gt_sentence'] = instance[' '.join(instance['tokens'])]
+                output[k]['imgID'] = instance['imageID']
+                output[k]['objID'] = instance['objectID']
+                output[k]['objClass'] = instance['objectClass']
+
+        return correct/float(k), output
 
     def comprehension(self, instance, bboxes, target):
         instances = {}
@@ -161,16 +169,25 @@ if __name__ == "__main__":
     if args.mode == 'comprehend':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=float('inf'))
         print("Start Comprehension")
-        acccuracy = model.run_comprehension(refer)
+        acccuracy, output = model.run_comprehension(refer)
         print("Accuracy {}".format(acccuracy))
-
 
     if args.mode == 'test':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
         print("Start Testing")
-        generated_exp = model.run_generate(refer)
-        for i in range(10, 20):
-            item = refer.getItem(i, split='val', display_image=True)
-            item['PIL'].show()
-            print(generated_exp[i])
-            input('Any key to continue')
+        generated_exp = model.run_generate(refer, split='test_unique')
+
+        with open('{}_{}_generated.csv'.format(checkpt_file.replace('models', 'output'), args.dataset), 'w') as fw:
+            fieldnames = ['generated_sentence', 'imgID', 'objID', 'objClass']
+            writer = DictWriter(fw, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for exp in generated_exp:
+                writer.writerow(exp)
+
+        #
+        # for i in range(10, 100):
+        #     item = refer.getItem(i, split='test_unique', display_image=True)
+        #     item['PIL'].show()
+        #     print(generated_exp[i])
+        #     input('Any key to continue')

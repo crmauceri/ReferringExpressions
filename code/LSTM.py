@@ -93,7 +93,7 @@ class LanguageModel(Classifier):
         end_idx = self.word2idx['<eos>']
 
         with torch.no_grad():
-            self.init_hidden(1)
+            self.hidden = self.init_hidden(1)
 
             while word_idx != end_idx and len(sentence) < 30:
                 ref = self.make_ref(word_idx, feats)

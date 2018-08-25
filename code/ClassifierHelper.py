@@ -6,6 +6,7 @@ import torch.autograd as autograd
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
+from collections import defaultdict
 
 torch.manual_seed(1)
 
@@ -139,7 +140,12 @@ class Classifier(nn.Module):
 
         generated_exp = [0]*len(refer_dataset)
         for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
-            generated_exp[k] = self.generate("<bos>", instance=instance)
+            instances, targets = self.trim_batch(instance)
+            generated_exp[k] = dict()
+            generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
+            generated_exp[k]['imgID'] = instance['imageID'].item()
+            generated_exp[k]['objID'] = instance['objectID'][0]
+            generated_exp[k]['objClass'] = instance['objectClass'][0]
 
         return generated_exp
 

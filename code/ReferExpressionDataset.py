@@ -1,5 +1,5 @@
 import os, random
-from PIL import Image
+from PIL import Image, ImageDraw
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -39,6 +39,12 @@ class ReferExpressionDataset(Dataset):
         self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
         self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'test']
 
+        if dataset == 'refcocog':
+            self.unique_test_objects = [ref['sent_ids'][0] for key, ref in self.refer.annToRef.items() if
+                                        ref['split'] == 'val']
+        else:
+            self.unique_test_objects = [ref['sent_ids'][0] for key,ref in self.refer.annToRef.items() if ref['split'] == 'test']
+
     def __len__(self):
         return self.length(self.active_split)
 
@@ -52,6 +58,8 @@ class ReferExpressionDataset(Dataset):
             return len(self.train_index)
         elif split == 'test':
             return len(self.test_index)
+        elif split == 'test_unique':
+            return 10#len(self.unique_test_objects)
         elif split == 'val':
             return len(self.val_index)
 
@@ -64,12 +72,18 @@ class ReferExpressionDataset(Dataset):
             sent_idx = self.train_index[idx]
         elif split == 'test':
             sent_idx = self.test_index[idx]
+        elif split == 'test_unique':
+            sent_idx = self.unique_test_objects[idx]
         elif split == 'val':
             sent_idx = self.val_index[idx]
 
         sentence = self.refer.Sents[sent_idx]['vocab_tensor']
-        #sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
+        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
         sample['vocab_tensor'] = sentence
+
+        sample['imageID'] = self.refer.sentToRef[sent_idx]['image_id']
+        sample['objectID'] = self.refer.sentToRef[sent_idx]['ann_id']
+        sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
 
         if self.use_image or display_image:
             ref = self.refer.sentToRef[sent_idx]
@@ -94,9 +108,13 @@ class ReferExpressionDataset(Dataset):
                     object, pos = self.getObject(image, box)
                     sample['contrast'].append({'object':object, 'pos':pos})
 
-            image = self.standarizeImageFormat(image)
-            sample['image'] = self.img_normalize(image)
+            image_std = self.standarizeImageFormat(image)
+            sample['image'] = self.img_normalize(image_std)
             if display_image:
+                bbox = [bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]]
+                draw = ImageDraw.Draw(image)
+                draw.rectangle(bbox, fill=None, outline=(255, 0, 0, 255))
+                del draw
                 sample['PIL'] = image
 
         return sample
@@ -119,6 +137,7 @@ class ReferExpressionDataset(Dataset):
             sentence['vocab_tensor'] = torch.tensor(padding + sentence['vocab'], dtype=torch.long, device=self.device)
 
     def standarizeImageFormat(self, image, bbox=None):
+        image = image.copy()
 
         #Crop if bbox is smaller than image size
         if bbox is not None:
