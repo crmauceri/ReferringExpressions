@@ -10,7 +10,7 @@ from collections import defaultdict
 
 torch.manual_seed(1)
 
-DEBUG = True
+DEBUG = False
 
 class Classifier(nn.Module):
     def __init__(self, disable_cuda=False):
@@ -53,8 +53,8 @@ class Classifier(nn.Module):
     def checkpt_file(self, checkpt_prefix):
         return '{}.mdl'.format(checkpt_prefix)
 
-    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, learning_rate=0.001, batch_size=4):
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate)
+    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, learning_rate=0.001, batch_size=4, l2_reg_fraction=0):
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate, weight_decay=l2_reg_fraction)
 
         refer_dataset.active_split = 'train'
 

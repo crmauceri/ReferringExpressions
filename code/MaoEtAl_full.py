@@ -120,6 +120,26 @@ class MMI_softmax_Loss(nn.Module):
 
         return loss
 
+    def image_forward(self, ref):
+        # Global feature
+        image = ref['image']
+        if self.use_cuda:
+            image = image.cuda()
+        image_out = self.imagenet(image)
+
+        # Object feature
+        object = ref['object']
+        if self.use_cuda:
+            object = object.cuda()
+        object_out = self.imagenet(object)
+
+        # Position features
+        # [top_left_x / W, top_left_y/H, bottom_left_x/W, bottom_left_y/H, size_bbox/size_image]
+        pos = ref['pos']
+
+        # Concatenate image representations
+        return torch.cat([image_out.repeat(object_out.size()[0], 1), object_out, pos], 1)
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')

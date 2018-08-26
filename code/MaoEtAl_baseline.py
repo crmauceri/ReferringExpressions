@@ -24,18 +24,20 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguagePlusImage(Classifier):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0):
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, l2_fraction=.00001):
         super(LanguagePlusImage, self).__init__()
 
         if checkpt_file is not None:
-            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)
+            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)_l2(?P<l2>\d+)', checkpt_file)
             self.hidden_dim = int(m.group('hidden'))
             self.feats_dim = int(m.group('feats'))
             self.dropout_p = float(m.group('dropout'))
+            self.l2_fraction = float(m.group('l2'))
         else:
             self.feats_dim = 2005
             self.hidden_dim = hidden_dim
             self.dropout_p = dropout
+            self.l2_fraction = l2_fraction
 
         #Text Embedding Network
         self.wordnet = LanguageModel(vocab=vocab, additional_feat=self.feats_dim, hidden_dim=self.hidden_dim, dropout=self.dropout_p)
@@ -71,7 +73,7 @@ class LanguagePlusImage(Classifier):
         pos = ref['pos']
 
         # Concatenate image representations
-        return torch.cat([image_out.repeat(object_out.size()[0], 1), object_out, pos], 1)
+        return torch.cat([image_out, object_out, pos], 1)
 
     def trim_batch(self, instance):
         return self.wordnet.trim_batch(instance)
@@ -81,11 +83,11 @@ class LanguagePlusImage(Classifier):
         self.wordnet.clear_gradients(batch_size)
 
     @staticmethod
-    def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p):
-        return '{}_hidden{}_feats{}_dropout{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p)
+    def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction):
+        return '{}_hidden{}_feats{}_dropout{:.1f}__l2{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
 
     def checkpt_file(self, checkpt_prefix):
-        return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p)
+        return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p, self.l2_fraction)
 
     def generate(self, start_word, instance=None, feats=None):
         with torch.no_grad():
@@ -100,7 +102,7 @@ class LanguagePlusImage(Classifier):
         dataloader = DataLoader(refer_dataset, batch_size=1)
 
         correct = 0.0
-        output = [{'gt_sentence':[], 'imgID':0, 'objID':0, 'objClass':"", 'correct':0}]*len(refer_dataset)
+        output = [0]*len(refer_dataset)
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
             with torch.no_grad():
                 for object in instance['contrast']:
@@ -110,16 +112,17 @@ class LanguagePlusImage(Classifier):
                 instances, targets = self.trim_batch(instance)
                 self.clear_gradients(batch_size=instances['object'].size()[0])
 
+                output[k] = dict()
                 label_scores = self(instances, parameters)
                 loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
                 if torch.argmin(loss).item() == 1:
                     correct += 1.0
                     output[k]['correct'] = 1
 
-                output[k]['gt_sentence'] = instance[' '.join(instance['tokens'])]
-                output[k]['imgID'] = instance['imageID']
-                output[k]['objID'] = instance['objectID']
-                output[k]['objClass'] = instance['objectClass']
+                output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
+                output[k]['imgID'] = instance['imageID'].item()
+                output[k]['objID'] = instance['objectID'].item()
+                output[k]['objClass'] = instance['objectClass'][0]
 
         return correct/float(k), output
 
@@ -144,6 +147,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
+    parser.add_argument('--l2_fraction', dest='l2_fraction', type=float, default=10e-6, help='L2 Regularization Fraction')
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
     parser.add_argument('--batch_size', dest='batch_size', type=float, default=16,
                         help='Training batch size')
@@ -155,29 +159,37 @@ if __name__ == "__main__":
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
+    checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout, args.l2_fraction)
     if (os.path.isfile(checkpt_file)):
         model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
     else:
-        model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
+        model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)
 
     if args.mode == 'train':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
-                                        learning_rate=args.learningrate, batch_size=args.batch_size)
+                                        learning_rate=args.learningrate, batch_size=args.batch_size, l2_reg_fraction=model.l2_fraction)
     if args.mode == 'comprehend':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=float('inf'))
         print("Start Comprehension")
-        acccuracy, output = model.run_comprehension(refer)
+        acccuracy, output = model.run_comprehension(refer, split='val')
         print("Accuracy {}".format(acccuracy))
+
+        with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
+            fieldnames = ['gt_sentence', 'imgID', 'objID', 'objClass', 'correct']
+            writer = DictWriter(fw, fieldnames=fieldnames)
+
+            writer.writeheader()
+            for exp in output:
+                writer.writerow(exp)
 
     if args.mode == 'test':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True)
         print("Start Testing")
         generated_exp = model.run_generate(refer, split='test_unique')
 
-        with open('{}_{}_generated.csv'.format(checkpt_file.replace('models', 'output'), args.dataset), 'w') as fw:
+        with open('{}_{}_{}_generated.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
             fieldnames = ['generated_sentence', 'imgID', 'objID', 'objClass']
             writer = DictWriter(fw, fieldnames=fieldnames)
 
