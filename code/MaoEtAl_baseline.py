@@ -84,7 +84,7 @@ class LanguagePlusImage(Classifier):
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction):
-        return '{}_hidden{}_feats{}_dropout{:.1f}__l2{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
+        return '{}_hidden{}_feats{}_dropout{:.1f}_l2{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
 
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p, self.l2_fraction)
