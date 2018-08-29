@@ -149,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
     parser.add_argument('--l2_fraction', dest='l2_fraction', type=float, default=10e-6, help='L2 Regularization Fraction')
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
-    parser.add_argument('--batch_size', dest='batch_size', type=float, default=16,
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
                         help='Training batch size')
 
     args = parser.parse_args()
