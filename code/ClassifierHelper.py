@@ -103,7 +103,7 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % 10 == 0:
-                self.save_model('{}.checkpoint{}'.format(epoch), {
+                self.save_model('{}.checkpoint{}'.format(checkpt_prefix, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
                     'total_loss': self.total_loss,
