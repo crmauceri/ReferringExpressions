@@ -57,11 +57,11 @@ class ReferExpressionDataset(Dataset):
         elif split == 'train':
             return len(self.train_index)
         elif split == 'test':
-            return 10#len(self.test_index)
+            return len(self.test_index)
         elif split == 'test_unique':
             return len(self.unique_test_objects)
         elif split == 'val':
-            return 10#len(self.val_index)
+            return len(self.val_index)
 
     def getItem(self, idx, split=None, display_image=False):
         sample = {}
