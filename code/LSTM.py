@@ -66,9 +66,10 @@ class LanguageModel(Classifier):
 
             #Concatenate text embedding and additional features
             #TODO fix for Maoetal_Full
-            #embeds = torch.cat([embeds.repeat(feats.size()[0], 1, 1), feats], 2)
-
-            embeds = torch.cat([embeds, feats], 2)
+            if embeds.size()[0]==1:
+                embeds = torch.cat([embeds.repeat(feats.size()[0], 1, 1), feats], 2)
+            else:
+                embeds = torch.cat([embeds, feats], 2)
 
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)

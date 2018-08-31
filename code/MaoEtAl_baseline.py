@@ -73,6 +73,8 @@ class LanguagePlusImage(Classifier):
         pos = ref['pos']
 
         # Concatenate image representations
+        if image_out.size()[0]!=object_out.size()[0]:
+            image_out = image_out.repeat(object_out.size()[0], 1)
         return torch.cat([image_out, object_out, pos], 1)
 
     def trim_batch(self, instance):
