@@ -28,7 +28,7 @@ class LanguagePlusImage(Classifier):
         super(LanguagePlusImage, self).__init__()
 
         if checkpt_file is not None:
-            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)_l2(?P<l2>\d+)', checkpt_file)
+            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>0.\d+)_l2(?P<l2>0.\d+)', checkpt_file)
             self.hidden_dim = int(m.group('hidden'))
             self.feats_dim = int(m.group('feats'))
             self.dropout_p = float(m.group('dropout'))
