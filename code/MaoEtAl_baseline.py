@@ -24,7 +24,7 @@ from refer_python3.refer import REFER
 #Network Definition
 class LanguagePlusImage(Classifier):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, l2_fraction=.00001):
+    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, l2_fraction=1e-5):
         super(LanguagePlusImage, self).__init__()
 
         if checkpt_file is not None:
@@ -86,7 +86,7 @@ class LanguagePlusImage(Classifier):
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction):
-        return '{}_hidden{}_feats{}_dropout{:.1f}_l2{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
+        return '{}_hidden{}_feats{}_dropout{:.1f}_l2{:f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
 
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p, self.l2_fraction)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
                         help='Size of LSTM embedding (Default:100)')
     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
-    parser.add_argument('--l2_fraction', dest='l2_fraction', type=float, default=10e-6, help='L2 Regularization Fraction')
+    parser.add_argument('--l2_fraction', dest='l2_fraction', type=float, default=1e-5, help='L2 Regularization Fraction')
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
                         help='Training batch size')
