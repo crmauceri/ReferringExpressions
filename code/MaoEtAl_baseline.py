@@ -28,7 +28,7 @@ class LanguagePlusImage(Classifier):
         super(LanguagePlusImage, self).__init__()
 
         if checkpt_file is not None:
-            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)_l2(?P<l2>\d+)', checkpt_file)
+            m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>0.\d+)_l2(?P<l2>0.\d+)', checkpt_file)
             self.hidden_dim = int(m.group('hidden'))
             self.feats_dim = int(m.group('feats'))
             self.dropout_p = float(m.group('dropout'))
@@ -86,7 +86,7 @@ class LanguagePlusImage(Classifier):
 
     @staticmethod
     def get_checkpt_file(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction):
-        return '{}_hidden{}_feats{}_dropout{:.1f}_l2{:.1f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
+        return '{}_hidden{}_feats{}_dropout{:.1f}_l2{:f}.mdl'.format(checkpt_file, hidden_dim, feats_dim, dropout_p, l2_fraction)
 
     def checkpt_file(self, checkpt_prefix):
         return self.get_checkpt_file(checkpt_prefix, self.hidden_dim, self.feats_dim, self.dropout_p, self.l2_fraction)
@@ -163,6 +163,7 @@ if __name__ == "__main__":
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout, args.l2_fraction)
     if (os.path.isfile(checkpt_file)):
+        print(checkpt_file)
         model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
     else:
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)
