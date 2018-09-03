@@ -101,7 +101,7 @@ class ReferExpressionDataset(Dataset):
 
             if self.n_contrast_object > 0:
                 annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
-                bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if id != ref['ann_id'] and self.refer.Anns[id]['bbox'][2]>0 and self.refer.Anns[id]['bbox'][3]>0]
+                bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if id != ref['ann_id'] and int(self.refer.Anns[id]['bbox'][2])>0 and int(self.refer.Anns[id]['bbox'][3])>0]
                 bboxes = random.sample(bboxes, min(self.n_contrast_object, len(bboxes)))
                 sample['contrast'] = []
                 for box in bboxes:
