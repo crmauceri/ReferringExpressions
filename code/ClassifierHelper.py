@@ -143,6 +143,7 @@ class Classifier(nn.Module):
             instances, targets = self.trim_batch(instance)
             generated_exp[k] = dict()
             generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
+            generated_exp[k]['refID'] = instance['refID'].item()
             generated_exp[k]['imgID'] = instance['imageID'].item()
             generated_exp[k]['objID'] = instance['objectID'][0]
             generated_exp[k]['objClass'] = instance['objectClass'][0]
