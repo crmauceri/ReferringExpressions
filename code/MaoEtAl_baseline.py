@@ -122,9 +122,11 @@ class LanguagePlusImage(Classifier):
                     output[k]['correct'] = 1
 
                 output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
+                output[k]['refID'] = instance['refID'].item()
                 output[k]['imgID'] = instance['imageID'].item()
                 output[k]['objID'] = instance['objectID'].item()
                 output[k]['objClass'] = instance['objectClass'][0]
+                output[k]['zero-shot'] = instance['zero-shot']
 
         return correct/float(k), output
 
@@ -180,7 +182,7 @@ if __name__ == "__main__":
         print("Accuracy {}".format(acccuracy))
 
         with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
-            fieldnames = ['gt_sentence', 'imgID', 'objID', 'objClass', 'correct']
+            fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'correct', 'zero-shot']
             writer = DictWriter(fw, fieldnames=fieldnames)
 
             writer.writeheader()
@@ -193,7 +195,7 @@ if __name__ == "__main__":
         generated_exp = model.run_generate(refer, split='test_unique')
 
         with open('{}_{}_{}_generated.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
-            fieldnames = ['generated_sentence', 'imgID', 'objID', 'objClass']
+            fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']
             writer = DictWriter(fw, fieldnames=fieldnames)
 
             writer.writeheader()

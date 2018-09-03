@@ -81,9 +81,19 @@ class ReferExpressionDataset(Dataset):
         sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
         sample['vocab_tensor'] = sentence
 
+        sample['refID'] = self.refer.sentToRef[sent_idx]['ref_id']
         sample['imageID'] = self.refer.sentToRef[sent_idx]['image_id']
         sample['objectID'] = self.refer.sentToRef[sent_idx]['ann_id']
-        sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
+
+        if('zero_shot' in self.refer.sentToRef[sent_idx]):
+            sample['zero-shot'] = self.refer.sentToRef[sent_idx]['zero_shot']
+        else:
+            sample['zero-shot'] = False
+
+        if(self.refer.annToRef[sample['objectID']]['category_id'] in self.refer.Cats):
+            sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
+        else:
+            sample['objectClass'] = "unknown"
 
         if self.use_image or display_image:
             ref = self.refer.sentToRef[sent_idx]
