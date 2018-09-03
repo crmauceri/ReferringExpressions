@@ -83,7 +83,7 @@ class ReferExpressionDataset(Dataset):
 
         sample['imageID'] = self.refer.sentToRef[sent_idx]['image_id']
         sample['objectID'] = self.refer.sentToRef[sent_idx]['ann_id']
-        #sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
+        sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
 
         if self.use_image or display_image:
             ref = self.refer.sentToRef[sent_idx]
