@@ -168,7 +168,7 @@ class SequenceLoss(nn.Module):
 
     def forward(self, embeddings, targets, per_instance=False):
         if per_instance:
-            loss = torch.zeros(embeddings.size()[0])
+            loss = torch.zeros(embeddings.size()[0], device=self.device)
             for step in range(targets.size()[1]):
                 loss += self.Loss(embeddings[:, step, :], targets[:, step])
         else:
