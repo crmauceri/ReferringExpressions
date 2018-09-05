@@ -39,6 +39,9 @@ class LanguageModel(Classifier):
         self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
         self.hidden = self.init_hidden(1)
 
+        self.txt_layernorm1 = nn.LayerNorm(hidden_dim)
+        self.txt_layernorm2 = nn.LayerNorm(hidden_dim)
+
         self.to(self.device)
         if checkpt_file is not None:
             super(LanguageModel, self).load_model(checkpt_file)
@@ -61,9 +64,7 @@ class LanguageModel(Classifier):
         embeds = self.dropout1(embeds)
         n, m, b = embeds.size()
 
-        self.txt_batchnorm = nn.BatchNorm1d(m)
-        self.txt_batchnorm.to(self.device)
-        embeds = self.txt_batchnorm(embeds)
+        embeds = self.txt_layernorm1(embeds)
 
         if 'feats' in ref:
             feats = ref['feats'].repeat(m, 1, 1).permute(1, 0, 2)
@@ -77,7 +78,7 @@ class LanguageModel(Classifier):
 
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)
-        lstm_out = self.txt_batchnorm(lstm_out)
+        lstm_out = self.txt_layernorm2(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out)
         return vocab_space
 
