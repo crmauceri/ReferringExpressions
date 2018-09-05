@@ -13,6 +13,7 @@ from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import numpy as np
 
 from refer_python3.refer import REFER
 
@@ -104,6 +105,8 @@ class LanguagePlusImage(Classifier):
         dataloader = DataLoader(refer_dataset, batch_size=1)
 
         correct = 0.0
+        p2 = 0.0
+        average_objects = 0.0
         output = [0]*len(refer_dataset)
         for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
             with torch.no_grad():
@@ -117,9 +120,14 @@ class LanguagePlusImage(Classifier):
                 output[k] = dict()
                 label_scores = self(instances, parameters)
                 loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
-                if torch.argmin(loss).item() == 1:
+                average_objects += loss.size()[0]
+                sorted_loss = np.argsort(loss)
+                if sorted_loss[0] == [0]:
                     correct += 1.0
-                    output[k]['correct'] = 1
+                    output[k]['p@1'] = 1
+                if sorted_loss[0] == [0] or sorted_loss[1]==0:
+                    p2 += 1.0
+                    output[k]['p@2'] = 1
 
                 output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
                 output[k]['refID'] = instance['refID'].item()
@@ -128,7 +136,11 @@ class LanguagePlusImage(Classifier):
                 output[k]['objClass'] = instance['objectClass'][0]
                 output[k]['zero-shot'] = instance['zero-shot']
 
-        return correct/float(k), output
+        print("P@1 {}".format(correct/float(k)))
+        print("P@1 {}".format(correct / float(k)))
+        print("Average objects compared to {}".format(average_objects / float(k)))
+
+        return output
 
     def comprehension(self, instance, bboxes, target):
         instances = {}
@@ -182,8 +194,7 @@ if __name__ == "__main__":
     if args.mode == 'comprehend':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=float('inf'))
         print("Start Comprehension")
-        acccuracy, output = model.run_comprehension(refer, split='val')
-        print("Accuracy {}".format(acccuracy))
+        output = model.run_comprehension(refer, split='val')
 
         with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
             fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'correct', 'zero-shot']

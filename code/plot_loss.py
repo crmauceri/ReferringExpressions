@@ -10,7 +10,7 @@ vocab.extend(['<bos>', '<eos>', '<unk>'])
 
 from os import listdir
 from os.path import isfile, join
-onlyfiles = [f for f in listdir('models/') if isfile(join('models/', f)) and f.endswith('.mdl') and 'dropout0.5' in f]
+onlyfiles = [f for f in listdir('models/') if isfile(join('models/', f)) and f.endswith('.mdl')]
 
 for checkpt_file in onlyfiles:
     model = LanguagePlusImage(checkpt_file=join('models/', checkpt_file), vocab=vocab)
