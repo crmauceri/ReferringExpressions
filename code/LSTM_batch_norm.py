@@ -62,6 +62,7 @@ class LanguageModel(Classifier):
         n, m, b = embeds.size()
 
         self.txt_batchnorm = nn.BatchNorm1d(m)
+        self.txt_batchnorm.to(self.device)
         embeds = self.txt_batchnorm(embeds)
 
         if 'feats' in ref:
