@@ -124,7 +124,7 @@ class LanguagePlusImage(Classifier):
                 output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
                 output[k]['refID'] = instance['refID'].item()
                 output[k]['imgID'] = instance['imageID'].item()
-                output[k]['objID'] = instance['objectID'].item()
+                output[k]['objID'] = instance['objectID'][0]
                 output[k]['objClass'] = instance['objectClass'][0]
                 output[k]['zero-shot'] = instance['zero-shot']
 
