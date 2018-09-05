@@ -39,9 +39,6 @@ class LanguageModel(Classifier):
         self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
         self.hidden = self.init_hidden(1)
 
-        #Batch norm layer
-        self.txt_batchnorm = nn.BatchNorm1d(self.hidden_dim)
-
         self.to(self.device)
         if checkpt_file is not None:
             super(LanguageModel, self).load_model(checkpt_file)
@@ -62,8 +59,10 @@ class LanguageModel(Classifier):
         sentence = ref['vocab_tensor'][:, :-1]
         embeds = self.embedding(sentence)
         embeds = self.dropout1(embeds)
-        embeds = self.txt_batchnorm(embeds)
         n, m, b = embeds.size()
+
+        self.txt_batchnorm = nn.BatchNorm1d(m)
+        embeds = self.txt_batchnorm(embeds)
 
         if 'feats' in ref:
             feats = ref['feats'].repeat(m, 1, 1).permute(1, 0, 2)
