@@ -4,7 +4,8 @@ import torch
 import torchvision.models as models
 import torch.nn as nn
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
+
 from AttentionModule import AttentionModule
 from TruncatedImageNetworks import TruncatedVGGorAlex
 from LSTM import LanguageModel

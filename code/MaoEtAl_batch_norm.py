@@ -8,7 +8,7 @@ import torchvision.models as models
 #torch.manual_seed(1)
 
 from TruncatedImageNetworks import TruncatedVGGorAlex
-from LSTM import LanguageModel
+from LSTM_batch_norm import LanguageModel
 from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
 from torch.utils.data import DataLoader
@@ -45,6 +45,10 @@ class LanguagePlusImage(Classifier):
         #Image Embedding Network
         self.imagenet = TruncatedVGGorAlex(models.vgg16(pretrained=True), maxpool=True, fix_weights=range(40))
 
+        #Batch norm layer
+        self.img1_batchnorm = nn.BatchNorm2d(3)
+        self.img2_batchnorm = nn.BatchNorm1d(self.feats_dim)
+
         self.to(self.device)
         if checkpt_file is not None:
             super(LanguagePlusImage, self).load_model(checkpt_file)
@@ -60,12 +64,14 @@ class LanguagePlusImage(Classifier):
         image = ref['image']
         if self.use_cuda:
             image = image.cuda()
+        image = self.img1_batchnorm(image)
         image_out = self.imagenet(image)
 
         # Object feature
         object = ref['object']
         if self.use_cuda:
             object = object.cuda()
+        object = self.img1_batchnorm(object)
         object_out = self.imagenet(object)
 
         # Position features
@@ -75,7 +81,9 @@ class LanguagePlusImage(Classifier):
         # Concatenate image representations
         if image_out.size()[0]!=object_out.size()[0]:
             image_out = image_out.repeat(object_out.size()[0], 1)
-        return torch.cat([image_out, object_out, pos], 1)
+        feat = torch.cat([image_out, object_out, pos], 1)
+
+        return self.img2_batchnorm(feat)
 
     def trim_batch(self, instance):
         return self.wordnet.trim_batch(instance)
@@ -124,7 +132,7 @@ class LanguagePlusImage(Classifier):
                 output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
                 output[k]['refID'] = instance['refID'].item()
                 output[k]['imgID'] = instance['imageID'].item()
-                output[k]['objID'] = instance['objectID'][0]
+                output[k]['objID'] = instance['objectID'].item()
                 output[k]['objClass'] = instance['objectClass'][0]
                 output[k]['zero-shot'] = instance['zero-shot']
 
@@ -155,12 +163,8 @@ if __name__ == "__main__":
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
                         help='Training batch size')
-    parser.add_argument('--DEBUG', type=bool, default=False)
 
     args = parser.parse_args()
-
-    if args.DEBUG:
-        torch.manual_seed(1)
 
     with open('vocab_file.txt', 'r') as f:
         vocab = f.read().split()
@@ -169,7 +173,6 @@ if __name__ == "__main__":
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout, args.l2_fraction)
     if (os.path.isfile(checkpt_file)):
-        print(checkpt_file)
         model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
     else:
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)

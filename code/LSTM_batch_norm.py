@@ -61,6 +61,9 @@ class LanguageModel(Classifier):
         embeds = self.dropout1(embeds)
         n, m, b = embeds.size()
 
+        self.txt_batchnorm = nn.BatchNorm1d(m)
+        embeds = self.txt_batchnorm(embeds)
+
         if 'feats' in ref:
             feats = ref['feats'].repeat(m, 1, 1).permute(1, 0, 2)
 
@@ -73,6 +76,7 @@ class LanguageModel(Classifier):
 
         lstm_out, self.hidden = self.lstm(embeds, self.hidden)
         lstm_out = self.dropout2(lstm_out)
+        lstm_out = self.txt_batchnorm(lstm_out)
         vocab_space = self.hidden2vocab(lstm_out)
         return vocab_space
 

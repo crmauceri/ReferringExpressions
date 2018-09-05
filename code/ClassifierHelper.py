@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import defaultdict
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 DEBUG = False
 
