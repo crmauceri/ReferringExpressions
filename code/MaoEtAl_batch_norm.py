@@ -8,7 +8,7 @@ import torchvision.models as models
 torch.manual_seed(1)
 
 from TruncatedImageNetworks import TruncatedVGGorAlex
-from LSTM import LanguageModel
+from LSTM_batch_norm import LanguageModel
 from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
 from torch.utils.data import DataLoader
