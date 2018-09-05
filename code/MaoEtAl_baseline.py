@@ -122,10 +122,10 @@ class LanguagePlusImage(Classifier):
                 loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
                 average_objects += loss.size()[0]
                 sorted_loss = np.argsort(loss)
-                if sorted_loss[0] == [0]:
+                if sorted_loss[0] == 0:
                     correct += 1.0
                     output[k]['p@1'] = 1
-                if sorted_loss[0] == [0] or sorted_loss[1]==0:
+                if sorted_loss[0] == 0 or sorted_loss[1] == 0:
                     p2 += 1.0
                     output[k]['p@2'] = 1
 
