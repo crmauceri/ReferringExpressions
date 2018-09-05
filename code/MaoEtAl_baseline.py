@@ -137,7 +137,7 @@ class LanguagePlusImage(Classifier):
                 output[k]['zero-shot'] = instance['zero-shot']
 
         print("P@1 {}".format(correct/float(k)))
-        print("P@2 {}".format(correct / float(k)))
+        print("P@2 {}".format(p2 / float(k)))
         print("Average objects compared to {}".format(average_objects / float(k)))
 
         return output
