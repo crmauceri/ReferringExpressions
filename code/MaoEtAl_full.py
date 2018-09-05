@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 from MaoEtAl_baseline import LanguagePlusImage
 from ReferExpressionDataset import ReferExpressionDataset

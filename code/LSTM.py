@@ -4,7 +4,7 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 from ClassifierHelper import Classifier
 from ReferExpressionDataset import ReferExpressionDataset

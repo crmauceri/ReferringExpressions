@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 from TruncatedImageNetworks import TruncatedVGGorAlex
 from LSTM import LanguageModel
@@ -155,8 +155,12 @@ if __name__ == "__main__":
     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
     parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
                         help='Training batch size')
+    parser.add_argument('--DEBUG', type=bool, default=False)
 
     args = parser.parse_args()
+
+    if args.DEBUG:
+        torch.manual_seed(1)
 
     with open('vocab_file.txt', 'r') as f:
         vocab = f.read().split()

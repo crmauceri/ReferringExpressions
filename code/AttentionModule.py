@@ -2,7 +2,7 @@ import torch
 import torch.autograd as autograd
 import torch.nn as nn
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 # As described in "Stacked Attention Networks for Image Question Answering"
 # Z. Yang, X. He, J. Gao et al.

@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-torch.manual_seed(1)
+#torch.manual_seed(1)
 
 from TruncatedImageNetworks import TruncatedVGGorAlex
 from LSTM_batch_norm import LanguageModel
