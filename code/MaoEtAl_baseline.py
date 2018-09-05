@@ -137,7 +137,7 @@ class LanguagePlusImage(Classifier):
                 output[k]['zero-shot'] = instance['zero-shot']
 
         print("P@1 {}".format(correct/float(k)))
-        print("P@1 {}".format(correct / float(k)))
+        print("P@2 {}".format(correct / float(k)))
         print("Average objects compared to {}".format(average_objects / float(k)))
 
         return output
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         output = model.run_comprehension(refer, split='val')
 
         with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
-            fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'correct', 'zero-shot']
+            fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'p@1', 'p@2', 'zero-shot']
             writer = DictWriter(fw, fieldnames=fieldnames)
 
             writer.writeheader()
