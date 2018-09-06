@@ -194,7 +194,10 @@ if __name__ == "__main__":
     if args.mode == 'comprehend':
         refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=float('inf'))
         print("Start Comprehension")
-        output = model.run_comprehension(refer, split='val')
+        if args.dataset=='refcocog':
+            output = model.run_comprehension(refer, split='val')
+        else:
+            output = model.run_comprehension(refer, split='test')
 
         with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
             fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'p@1', 'p@2', 'zero-shot']
