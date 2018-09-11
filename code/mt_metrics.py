@@ -5,7 +5,7 @@ from csv import DictReader
 
 from nlgeval import NLGEval
 
-refer = REFER(dataset='sunspot', splitBy ='boulder', data_root='pyutils/refer_python3/data')
+refer = REFER(dataset='refcocog', splitBy ='google', data_root='pyutils/refer_python3/data')
 
 #Self eval
 hypothesis = []
@@ -20,7 +20,7 @@ if SELF_EVAL:
             references.append([s['sent'] for s in ref['sentences'][1:]])
 else:
     # load generation outputs
-    with open('/Users/Mauceri/Workspace/ReferExpGeneration/output/maoetal_baseline_batch_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl_sunspot_60_generated.csv',
+    with open('/Users/Mauceri/Workspace/ReferExpGeneration/output/maoetal_finetune60_lr1e-5_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl_refcocog_90_generated.csv',
               newline='') as csvfile:
         genData = DictReader(csvfile)
         for row in genData:
