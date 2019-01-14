@@ -10,3 +10,6 @@
 [submodule "pyutils/DepthAwareCNN"]
 	path = pyutils/DepthAwareCNN/DepthAwareCNN
 	url = https://github.com/crmauceri/DepthAwareCNN.git
+[submodule "pyutils/coco"]
+	path = pyutils/coco
+	url = https://github.com/crmauceri/coco.git
