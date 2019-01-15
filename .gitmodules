@@ -16,3 +16,6 @@
 [submodule "pyutils/refer_python3/refer_sunspot"]
 	path = pyutils/refer_python3/refer
 	url = https://github.com/crmauceri/refer_sunspot.git
+[submodule "pyutils/cocoapi"]
+	path = pyutils/cocoapi
+	url = https://github.com/cocodataset/cocoapi.git

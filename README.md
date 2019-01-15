@@ -1,7 +1,21 @@
 ## Prerequisites
 
--pytorch 0.4
+Available with conda
+- [pytorch](https://pytorch.org)
+- scipy
+- h5py
+- opencv
+- matplotlib
+- scikit-image
+- cython
 
+Use pip install
+- dominate
+- tensorboardX
+
+Recommended
+
+- CUDA 8.0
 
 ## Install
 
@@ -9,14 +23,15 @@
 ```
 git clone --recurse-submodules https://github.com/crmauceri/ReferExpGeneration.git
 ```
-- Make and install mask extention
+- Install pyutils
 ```
-cd pyutils/refer_python3
-make
-pip install -e .
+cd pyutils/
+./install.sh
+cd ..
 ```
-- Install pyutils 
+- Make directories for models and output
 ```
-cd ../..
-pip install -e pyutils/
+mkdir models
+mkdir checkpoints
+mkdir output
 ```
