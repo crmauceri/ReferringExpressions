@@ -10,9 +10,6 @@
 [submodule "pyutils/DepthAwareCNN"]
 	path = pyutils/DepthAwareCNN/DepthAwareCNN
 	url = https://github.com/crmauceri/DepthAwareCNN.git
-[submodule "pyutils/coco"]
-	path = pyutils/coco
-	url = https://github.com/crmauceri/coco.git
 [submodule "pyutils/refer_python3/refer_sunspot"]
 	path = pyutils/refer_python3/refer
 	url = https://github.com/crmauceri/refer_sunspot.git
