@@ -1,7 +1,4 @@
-[submodule "refer_python3"]
-	path = pyutils/refer_python3
-	url = https://github.com/crmauceri/refer_python3.git
-[submodule "cocoapi"]
+[submodule "pyutils/cocoapi"]
 	path = pyutils/cocoapi
 	url = https://github.com/cocodataset/cocoapi.git
 [submodule "pyutils/DepthAwareCNN"]
@@ -10,9 +7,6 @@
 [submodule "pyutils/refer_python3/refer_sunspot"]
 	path = pyutils/refer_python3/refer
 	url = https://github.com/crmauceri/refer_sunspot.git
-[submodule "pyutils/cocoapi"]
-	path = pyutils/cocoapi
-	url = https://github.com/cocodataset/cocoapi.git
-[submodule "pyutils/MaskRCNN/maskrcnn-benchmark"]
+[submodule "pyutils/maskrcnn-benchmark"]
 	path = pyutils/maskrcnn-benchmark
-	url = https://github.com/facebookresearch/maskrcnn-benchmark.git
+	url = https://github.com/crmauceri/maskrcnn-benchmark.git
