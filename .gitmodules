@@ -4,9 +4,6 @@
 [submodule "cocoapi"]
 	path = pyutils/cocoapi
 	url = https://github.com/cocodataset/cocoapi.git
-[submodule "pyutils/MaskRCNN"]
-	path = pyutils/MaskRCNN/MaskRCNN
-	url = https://github.com/crmauceri/pytorch-mask-rcnn-depth.git
 [submodule "pyutils/DepthAwareCNN"]
 	path = pyutils/DepthAwareCNN/DepthAwareCNN
 	url = https://github.com/crmauceri/DepthAwareCNN.git
@@ -16,3 +13,6 @@
 [submodule "pyutils/cocoapi"]
 	path = pyutils/cocoapi
 	url = https://github.com/cocodataset/cocoapi.git
+[submodule "pyutils/MaskRCNN/maskrcnn-benchmark"]
+	path = pyutils/maskrcnn-benchmark
+	url = https://github.com/facebookresearch/maskrcnn-benchmark.git
