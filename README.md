@@ -2,16 +2,22 @@
 
 Available with conda
 - [pytorch](https://pytorch.org)
+
+```sh
+conda install scipy h5py opencv matplotlib scikit-image cython tqdm
+```
 - scipy
 - h5py
 - opencv
 - matplotlib
 - scikit-image
 - cython
+- tqdm
 
 Use pip install
 - dominate
 - tensorboardX
+- yacs
 
 Recommended
 
