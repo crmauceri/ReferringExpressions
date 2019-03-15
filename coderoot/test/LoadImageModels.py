@@ -4,7 +4,7 @@ import os, argparse
 
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data.transforms import build_transforms
-from coderoot.models.RCNN_Localizer import GeneralizedRCNN
+from coderoot.models.RCNN_Localizer import HHA_RCNN, ReferExp_RCNN
 
 import torch
 from maskrcnn_benchmark.config import cfg
@@ -74,7 +74,7 @@ data_loader = make_data_loader(
     start_iter=arguments["iteration"],
 )
 
-model = GeneralizedRCNN(cfg, vocab=data_loader.dataset.datasets[0].vocab)
+model = ReferExp_RCNN(cfg, vocab=data_loader.dataset.datasets[0].vocab)
 device = torch.device(cfg.MODEL.DEVICE)
 model.to(device)
 

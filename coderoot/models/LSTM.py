@@ -55,12 +55,12 @@ class LanguageModel(Classifier):
         return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
     def forward(self, ref=None, parameters=None):
-        sentence = ref['vocab_tensor'][:, :-1]
+        sentence = ref.tensor[:, :-1]
         embeds = self.embedding(sentence)
         embeds = self.dropout1(embeds)
         n, m, b = embeds.size()
 
-        if 'feats' in ref:
+        if ref.has_field('feats'):
             feats = ref['feats'].repeat(m, 1, 1).permute(1, 0, 2)
 
             #Concatenate text embedding and additional features
@@ -81,10 +81,10 @@ class LanguageModel(Classifier):
             ref['feats'] = feats
         return ref
 
-    def trim_batch(self, vocab_tensor):
-        vocab_tensor= [t[:, torch.sum(t, 0) > 0] for t in vocab_tensor]
-        target = [torch.tensor(t[:, 1:], dtype=torch.long, requires_grad=False, device=self.device) for t in vocab_tensor]
-        return vocab_tensor, target
+    # def trim_batch(self, vocab_tensor):
+    #     vocab_tensor= [t[:, torch.sum(t, 0) > 0] for t in vocab_tensor]
+    #     target = [torch.tensor(t[:, 1:], dtype=torch.long, requires_grad=False, device=self.device) for t in vocab_tensor]
+    #     return vocab_tensor, target
 
     def clear_gradients(self, batch_size):
         super(LanguageModel, self).clear_gradients()
