@@ -4,7 +4,7 @@ import os, argparse
 
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data.transforms import build_transforms
-from ..models.RCNN_Localizer import HHA_RCNN, ReferExp_RCNN
+from coderoot.models.RCNN_Localizer import HHA_RCNN, ReferExp_RCNN
 
 import torch
 from maskrcnn_benchmark.config import cfg
