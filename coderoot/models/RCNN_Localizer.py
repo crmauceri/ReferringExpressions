@@ -279,7 +279,7 @@ class ReferExp_RCNN(HHA_RCNN):
         for i, feature in enumerate(image_features):
             image_shape = feature.shape
             full_shape = torch.Size((text_shape[1], image_shape[1]+text_shape[2], image_shape[2], image_shape[3]))
-            f = torch.zeros(full_shape)
+            f = torch.zeros(full_shape, device=device)
 
             f[:, image_shape[1]:, :, :] = text_features.reshape((text_shape[1], text_shape[2], 1, 1)).repeat(1, 1, image_shape[2], image_shape[3])
             image_mask = [len(s) for s in sentences]
