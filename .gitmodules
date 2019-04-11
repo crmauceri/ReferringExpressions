@@ -1,9 +1,6 @@
-[submodule "pyutils/cocoapi"]
+[submodule "refer_python3"]
+	path = pyutils/refer_python3
+	url = https://github.com/crmauceri/refer_python3.git
+[submodule "cocoapi"]
 	path = pyutils/cocoapi
 	url = https://github.com/cocodataset/cocoapi.git
-[submodule "pyutils/DepthAwareCNN"]
-	path = pyutils/DepthAwareCNN/DepthAwareCNN
-	url = https://github.com/crmauceri/DepthAwareCNN.git
-[submodule "pyutils/maskrcnn-benchmark"]
-	path = pyutils/maskrcnn-benchmark
-	url = https://github.com/crmauceri/maskrcnn-benchmark.git

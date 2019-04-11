@@ -1,27 +1,7 @@
 ## Prerequisites
 
-Available with conda
-- [pytorch](https://pytorch.org)
+-pytorch 0.4
 
-```sh
-conda install scipy h5py opencv matplotlib scikit-image cython tqdm
-```
-- scipy
-- h5py
-- opencv
-- matplotlib
-- scikit-image
-- cython
-- tqdm
-
-Use pip install
-- dominate
-- tensorboardX
-- yacs
-
-Recommended
-
-- CUDA 8.0
 
 ## Install
 
@@ -29,15 +9,14 @@ Recommended
 ```
 git clone --recurse-submodules https://github.com/crmauceri/ReferExpGeneration.git
 ```
-- Install pyutils
+- Make and install mask extention
 ```
-cd pyutils/
-./install.sh
-cd ..
+cd pyutils/refer_python3
+make
+pip install -e .
 ```
-- Make directories for models and output
+- Install pyutils 
 ```
-mkdir models
-mkdir checkpoints
-mkdir output
+cd ../..
+pip install -e pyutils/
 ```

@@ -1,13 +1,11 @@
 import os, random
-from PIL import Image, ImageDraw, ImageChops
+from PIL import Image, ImageDraw
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL.ImageStat import Stat
 
-from refer import REFER
-from pycocotools import mask
-
+from refer_python3.refer import REFER
 
 class ReferExpressionDataset(Dataset):
 
@@ -92,9 +90,10 @@ class ReferExpressionDataset(Dataset):
         else:
             sample['zero-shot'] = False
 
-        sample['objectlabel'] = torch.zeros((1, len(self.refer.Cats)))
         if(self.refer.annToRef[sample['objectID']]['category_id'] in self.refer.Cats):
-            sample['objectlabel'][0][self.refer.annToRef[sample['objectID']]['category_id']] = 1
+            sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
+        else:
+            sample['objectClass'] = "unknown"
 
         if self.use_image or display_image:
             ref = self.refer.sentToRef[sent_idx]
@@ -108,10 +107,7 @@ class ReferExpressionDataset(Dataset):
                 image = image.convert("RGB")
 
             bbox = self.refer.Anns[ref['ann_id']]['bbox']
-            sample['bbox'] = torch.Tensor(bbox)
-            sample['image_size'] = (w, h)
             sample['object'], sample['pos'] = self.getObject(image, bbox)
-            sample['mask'] = mask.decode(self.refer.Anns[ref['ann_id']]['segmentation'])
 
             if self.n_contrast_object > 0:
                 annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
@@ -129,10 +125,6 @@ class ReferExpressionDataset(Dataset):
                 draw = ImageDraw.Draw(image)
                 draw.rectangle(bbox, fill=None, outline=(255, 0, 0, 255))
                 del draw
-
-                rgb = image.split()
-                rgb = [ImageChops.add(rgb[0], Image.fromarray(sample['mask']*100)), rgb[1], rgb[2]]
-                image = Image.merge(image.mode, rgb)
                 sample['PIL'] = image
 
         return sample

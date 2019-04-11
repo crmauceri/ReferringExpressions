@@ -7,14 +7,15 @@ import torchvision.models as models
 
 #torch.manual_seed(1)
 
-from coderoot.models.TruncatedImageNetworks import TruncatedVGGorAlex
-from .LSTM import LanguageModel
-from .ClassifierHelper import Classifier, SequenceLoss
-from coderoot.datamanagement.ReferExpressionDataset import ReferExpressionDataset
+from TruncatedImageNetworks import TruncatedVGGorAlex
+from LSTM import LanguageModel
+from ClassifierHelper import Classifier, SequenceLoss
+from ReferExpressionDataset import ReferExpressionDataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
+from refer_python3.refer import REFER
 
 # As described in "Generation and comprehension of unambiguous object descriptions."
 # Mao, Junhua, et al.
