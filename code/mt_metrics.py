@@ -1,9 +1,9 @@
 from tqdm import tqdm
-from refer_python3.refer import REFER
+from refer import REFER
 import numpy as np
 from csv import DictReader
 
-from nlgeval import NLGEval
+from nlg-eval import NLGEval
 
 refer = REFER(dataset='refcocog', splitBy ='google', data_root='pyutils/refer_python3/data')
 

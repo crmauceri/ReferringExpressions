@@ -10,7 +10,7 @@ from MaoEtAl_baseline import LanguagePlusImage
 from ReferExpressionDataset import ReferExpressionDataset
 from ClassifierHelper import SequenceLoss
 
-from refer_python3.refer import REFER
+from refer import REFER
 
 # As described in "Generation and comprehension of unambiguous object descriptions."
 # Mao, Junhua, et al.

@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
-from refer_python3.refer import REFER
+from refer import REFER
 
 # As described in "Generation and comprehension of unambiguous object descriptions."
 # Mao, Junhua, et al.

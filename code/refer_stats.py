@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from refer_python3.refer import REFER
+from refer import REFER
 import numpy as np
 
 with open('/Users/Mauceri/Workspace/SUNSpotCollection/locative_prep.txt', 'r') as f:

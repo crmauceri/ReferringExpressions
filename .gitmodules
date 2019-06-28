@@ -1,6 +1,0 @@
-[submodule "refer_python3"]
-	path = pyutils/refer_python3
-	url = https://github.com/crmauceri/refer_python3.git
-[submodule "cocoapi"]
-	path = pyutils/cocoapi
-	url = https://github.com/cocodataset/cocoapi.git

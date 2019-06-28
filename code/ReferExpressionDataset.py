@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL.ImageStat import Stat
 
-from refer_python3.refer import REFER
+from refer import REFER
 
 class ReferExpressionDataset(Dataset):
 
@@ -21,7 +21,7 @@ class ReferExpressionDataset(Dataset):
         self.use_image = use_image
         self.n_contrast_object = n_contrast_object
 
-        self.refer = REFER(dataroot, dataset, splitBy)
+        self.refer = REFER(dataroot, imagedir, dataset, splitBy)
         self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.sent2vocab(self.word2idx)
