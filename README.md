@@ -68,8 +68,7 @@ to avoid messing up other installations.
 
 1. Make a <data_root> directory for SUNSpot, for example `data/sunspot/`.
 1. Download [the SUNRGBD images](http://rgbd.cs.princeton.edu). The directory you save them in will be your <img_root>.
-2. Download [the COCO style annotations]() to <data_root>
-3. Download [the refering expressions]() to <data_root>
+2. Download [the SUNSpot annotations]() and unzip them in <data_root>
 
 ### Publicly available datasets
 
@@ -84,7 +83,7 @@ We use [MegaDepth](https://github.com/lixx2938/MegaDepth) to generate synthetic 
 2. Make a [COCO style annotation file](http://cocodataset.org/#format-data) describing your images and bounding box annotations 
 and save as `<data_root>/instance.json` 
 
-3. Save your referring expressions as a pickle file, `<data_root>/ref(<split_name>).p`, with the structure:
+3. Save your referring expressions as a pickle file, `<data_root>/ref(<version_name>).p`, with the structure:
 
     ```
     refs: list of dict [
@@ -100,7 +99,6 @@ and save as `<data_root>/instance.json`
             } ...
         ]
         file_name : file name of image relative to img_root (str)
-        depth_file_name(optional) : depth image file path relative to img_root (str)
         category_id : object category label (int)
         ann_id : id of object annotation in instance.json (int)
         sent_ids : same ids as nested sentences[...][sent_id] (list of int)
@@ -109,9 +107,17 @@ and save as `<data_root>/instance.json`
     ] 
     ```
 
-4. You can check if it loads correctly by running 
+4. Optional : If you have depth images, make a mapping file, <data_root>/depth.json which maps image ids to depth file paths
+    ```
+    {
+        <image_id> : file name of depth image relative to depth_root  (str)
+        ...    
+    }
+    ```
+
+4. You can check if the dataset loads correctly by running 
     ```bash
-    python code/refer.py --data_root <data_root> --img_root <img_root>
+    python code/refer.py --data_root <data_root> --img_root <img_root> --depth_root <depth_root> --version <version_name> --dataset <dataset_name>
     ```
 
 ##  How to Use Networks

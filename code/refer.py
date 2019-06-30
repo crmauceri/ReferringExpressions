@@ -34,29 +34,36 @@ from pycocotools import mask
 
 class REFER:
 
-    def __init__(self, data_root, image_dir, dataset='refcoco', splitBy='unc'):
+    def __init__(self, data_root, image_dir, dataset, version, depth_dir=None):
         # provide data_root folder which contains refclef, refcoco, refcoco+ and refcocog
         # also provide dataset name and splitBy information
         # e.g., dataset = 'refcoco', splitBy = 'unc'
         print('loading dataset %s into memory...' % dataset)
         self.ROOT_DIR = osp.abspath(osp.dirname(__file__))
-        self.DATA_DIR = osp.join(data_root, dataset)
+        self.DATA_DIR = data_root
         self.IMAGE_DIR = image_dir
+        self.DEPTH_DIR = depth_dir
 
-        # load refs from data/dataset/refs(dataset).json
+        # load refs from data_root/refs(splitBy).json
         tic = time.time()
-        ref_file = osp.join(self.DATA_DIR, 'refs(' + splitBy + ').p')
+        ref_file = osp.join(self.DATA_DIR, 'refs(' + version + ').p')
         self.data = {}
         self.data['dataset'] = dataset
         with open(ref_file, 'rb') as f:
             self.data['refs'] = pickle.load(f)
 
-        # load annotations from data/dataset/instances.json
+        # load annotations from data_root/instances.json
         instances_file = osp.join(self.DATA_DIR, 'instances.json')
         instances = json.load(open(instances_file, 'r'))
         self.data['images'] = instances['images']
         self.data['annotations'] = instances['annotations']
         self.data['categories'] = instances['categories']
+
+        # load filepaths from data_root/depth.json
+        if self.DEPTH_DIR is not None:
+            depth_file = osp.join(self.DATA_DIR, 'depth.json')
+            depth = json.load(open(depth_file, 'r'))
+            self.data['depth'] = depth
 
         # create index
         self.createIndex()
@@ -87,6 +94,11 @@ class REFER:
         for cat in self.data['categories']:
             Cats[cat['id']] = cat['name']
 
+        #fetch info from depth
+        if self.DEPTH_DIR is not None:
+            for id, depth in self.data['depth'].items():
+                Imgs[int(id)]['depth_file_name'] = depth
+
         # fetch info from refs
         Refs, imgToRefs, refToAnn, annToRef, catToRefs = {}, {}, {}, {}, {}
         Sents, sentToRef, sentToTokens = {}, {}, {}
@@ -98,6 +110,10 @@ class REFER:
             ann_id = ref['ann_id']
             category_id = ref['category_id']
             image_id = ref['image_id']
+
+            # Add depth paths if present
+            if 'depth_file_name' in ref:
+                Imgs[image_id]
 
             # add mapping related to ref
             Refs[ref_id] = ref
@@ -284,3 +300,14 @@ class REFER:
         ax = plt.gca()
         ax.imshow(msk)
 
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Test dataset loading')
+    parser.add_argument('--img_root', help='path to the image directory', default='datasets/')
+    parser.add_argument('--depth_root', help='path to the image directory', default='datasets/')
+    parser.add_argument('--data_root', help='path to data directory', default='datasets/sunspot/')
+    parser.add_argument('--dataset', help='dataset name', default='sunspot')
+    parser.add_argument('--version', help='team that made the dataset splits', default='boulder')
+    args = parser.parse_args()
+
+    refer = REFER(data_root=args.data_root, image_dir=args.img_root, depth_dir=args.depth_root, dataset=args.dataset, version=args.version)
