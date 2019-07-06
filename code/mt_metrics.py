@@ -3,7 +3,7 @@ from refer import REFER
 import numpy as np
 from csv import DictReader
 
-from nlg-eval import NLGEval
+from nlg_eval import NLGEval
 
 refer = REFER(dataset='refcocog', splitBy ='google', data_root='pyutils/refer_python3/data')
 

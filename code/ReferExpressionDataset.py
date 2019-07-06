@@ -9,7 +9,7 @@ import numpy as np
 class ReferExpressionDataset(Dataset):
 
     def __init__(self, refer, dataset, vocab, disable_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
-                 image_std=[0.229, 0.224, 0.225], use_image=False, use_depth=False, n_contrast_object=0):
+                 image_std=[0.229, 0.224, 0.225], use_image=False, depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
 
         if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
@@ -26,6 +26,8 @@ class ReferExpressionDataset(Dataset):
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.sent2vocab(self.word2idx)
 
+        self.toTensorTransform = transforms.ToTensor()
+
         self.image_size = transform_size
         self.img_normalize = transforms.Compose([
             transforms.ToTensor(),
@@ -33,11 +35,9 @@ class ReferExpressionDataset(Dataset):
                                  std=image_std)
             ])
 
-        # TODO find zero mean for SUNRGBD depth channel
         self.depth_normalize = transforms.Compose([
-            transforms.ToTensor(),
-            # transforms.Normalize(mean=image_mean,
-            #                      std=image_std)
+            transforms.Normalize(mean=[depth_mean],
+                                  std=[depth_std])
         ])
 
 
@@ -50,7 +50,7 @@ class ReferExpressionDataset(Dataset):
         ])
 
         self.rev_depth_normalize = transforms.Compose([
-            #transforms.Normalize(mean=-1 * image_mean / image_std, std=1 / image_std),
+            transforms.Normalize(mean=-1 * depth_mean / depth_std, std=1 / depth_std),
             transforms.ToPILImage(mode='I')
         ])
 
@@ -168,6 +168,11 @@ class ReferExpressionDataset(Dataset):
 
         return pad_image
 
+    def normalizeDepth(self, raw_depth, bbox=None):
+        depth = self.toTensorTransform(self.standarizeImageFormat(raw_depth, bbox=bbox))
+        depth = self.depth_normalize(torch.as_tensor(depth, dtype=torch.float))
+        return depth
+
     def getObject(self, bbox, image, depth=None):
         w, h = image.size
 
@@ -177,7 +182,7 @@ class ReferExpressionDataset(Dataset):
         rgb_object = self.img_normalize(self.standarizeImageFormat(image, bbox=bbox))
 
         if depth is not None:
-            d_object = torch.as_tensor(self.depth_normalize(self.standarizeImageFormat(depth, bbox=bbox)), dtype=torch.float)
+            d_object = self.normalizeDepth(depth, bbox=bbox)
             rgbd_object = torch.cat((rgb_object, d_object), 0)
             return rgbd_object, pos
         else:
@@ -209,17 +214,17 @@ class ReferExpressionDataset(Dataset):
             raw_depth = Image.open(depth_name)
 
             # Scale and normalize depth image
-            depth = torch.as_tensor(self.depth_normalize(self.standarizeImageFormat(raw_depth)), dtype=torch.float)
+            depth = self.normalizeDepth(raw_depth)
             sample['image'] = torch.cat((image, depth), 0)
 
         else:
             mode = 'RGB'
-            depth = None
+            raw_depth = None
             sample['image'] = image
 
         #Extract a crop of the target bounding box
         bbox = self.refer.Anns[ref['ann_id']]['bbox']
-        sample['object'], sample['pos'] = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox, mode=mode)
+        sample['object'], sample['pos'] = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox)
 
         # Extract crops of contrast objects
         if self.n_contrast_object > 0:
@@ -230,7 +235,7 @@ class ReferExpressionDataset(Dataset):
             bboxes = random.sample(bboxes, min(self.n_contrast_object, len(bboxes)))
             sample['contrast'] = []
             for bbox in bboxes:
-                object, pos = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox, mode=mode)
+                object, pos = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox)
                 sample['contrast'].append({'object': object, 'pos': pos})
 
         if display_image:

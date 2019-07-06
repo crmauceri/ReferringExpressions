@@ -7,7 +7,7 @@ import torchvision.models as models
 
 #torch.manual_seed(1)
 
-from TruncatedImageNetworks import TruncatedVGGorAlex
+from TruncatedImageNetworks import DepthVGGorAlex
 from LSTM import LanguageModel
 from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
@@ -44,7 +44,7 @@ class LanguagePlusImage(Classifier):
         self.wordnet = LanguageModel(vocab=vocab, additional_feat=self.feats_dim, hidden_dim=self.hidden_dim, dropout=self.dropout_p)
 
         #Image Embedding Network
-        self.imagenet = TruncatedVGGorAlex(models.vgg16(pretrained=True), maxpool=True, fix_weights=range(40))
+        self.imagenet = DepthVGGorAlex(models.vgg16(pretrained=False), maxpool=True)
 
         self.to(self.device)
         if checkpt_file is not None:
@@ -191,12 +191,12 @@ if __name__ == "__main__":
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)
 
     if args.mode == 'train':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True)
+        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True, use_depth=True)
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer_dataset, args.checkpoint_prefix, parameters={'use_image': True},
                                         learning_rate=args.learningrate, batch_size=args.batch_size, l2_reg_fraction=model.l2_fraction)
     if args.mode == 'comprehend':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, n_contrast_object=float('inf'))
+        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, n_contrast_object=float('inf'), use_depth=True)
         print("Start Comprehension")
         if args.dataset=='refcocog':
             output = model.run_comprehension(refer_dataset, split='val')
@@ -212,7 +212,7 @@ if __name__ == "__main__":
                 writer.writerow(exp)
 
     if args.mode == 'test':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True)
+        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True, use_depth=True)
         print("Start Testing")
         generated_exp = model.run_generate(refer_dataset, split='test_unique')
 

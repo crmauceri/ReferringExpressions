@@ -27,6 +27,7 @@ class TruncatedVGGorAlex(nn.Module):
         super(TruncatedVGGorAlex, self).__init__()
         self.VGG = vgg
         self.ignore_classification = ignore_classification
+
         #Remove last pooling layer
         if not maxpool:
             self.VGG.features = nn.Sequential(*list(vgg.features.children())[:-1])
@@ -54,3 +55,10 @@ class TruncatedVGGorAlex(nn.Module):
                 for param in child.parameters():
                     param.requires_grad = True
             child_counter += 1
+
+class DepthVGGorAlex(TruncatedVGGorAlex):
+    def __init__(self, vgg, maxpool=False, ignore_classification=False):
+        super(DepthVGGorAlex, self).__init__(vgg, maxpool, ignore_classification, None)
+
+        depth_input_layer = nn.Conv2d(4, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        self.VGG.features = nn.Sequential(depth_input_layer, *list(self.VGG.features.children())[1:])
