@@ -27,8 +27,8 @@
 #                        Training batch size
 #  --DEBUG DEBUG         Sets random seed to fixed value
 
-CUDA_VISIBLE_DEVICES=${1} python code/MaoEtAl_depth.py train models/maoetal_depth  \\
-    --img_root datasets/coco/images/ --depth_root datasets/coco/Megadepth/ --data_root datasets/coco/ \\
-    --dataset refcocog --version google  \\
-    --epochs 30 \\
+CUDA_VISIBLE_DEVICES=${1} python code/MaoEtAl_depth.py train models/maoetal_depth  \
+    --img_root datasets/coco/images/train2014/ --depth_root datasets/coco/images/megadepth/ --data_root datasets/coco/refcocog \
+    --dataset refcocog --version google  \
+    --epochs 30 \
 

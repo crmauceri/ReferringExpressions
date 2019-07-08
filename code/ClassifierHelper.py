@@ -23,9 +23,11 @@ class Classifier(nn.Module):
         if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
             self.use_cuda = True
+            print("Using cuda")
         else:
             self.device = torch.device('cpu')
             self.use_cuda = False
+            print("Using cpu")
 
     def forward(self, instance, parameters):
         pass
