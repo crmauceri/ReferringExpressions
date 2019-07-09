@@ -26,7 +26,7 @@ from refer import REFER
 class LanguagePlusImage(Classifier):
 
     def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, l2_fraction=1e-5):
-        super(LanguagePlusImage, self).__init__()
+        super(LanguagePlusImage, self).__init__(loss_function = SequenceLoss(nn.CrossEntropyLoss()))
 
         if checkpt_file is not None:
             m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>0.\d+)_l2(?P<l2>\d.0e[+-]\d+)', checkpt_file)

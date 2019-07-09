@@ -9,7 +9,7 @@ import torch.nn as nn
 from AttentionModule import AttentionModule
 from TruncatedImageNetworks import TruncatedVGGorAlex
 from LSTM import LanguageModel
-from ClassifierHelper import Classifier
+from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
 
 # Inspired by "Stacked attention networks for image question answering."
@@ -21,7 +21,7 @@ from ReferExpressionDataset import ReferExpressionDataset
 class SAN(Classifier):
 
     def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, use_cuda=False):
-        super(SAN, self).__init__()
+        super(SAN, self).__init__(loss_function = SequenceLoss(nn.CrossEntropyLoss()))
 
         if checkpt_file is not None:
             m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)

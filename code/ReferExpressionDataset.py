@@ -111,7 +111,7 @@ class ReferExpressionDataset(Dataset):
             sample['zero-shot'] = False
 
         if(self.refer.annToRef[sample['objectID']]['category_id'] in self.refer.Cats):
-            sample['objectClass'] = self.refer.Cats[self.refer.annToRef[sample['objectID']]['category_id']]
+            sample['objectClass'] = self.refer.annToRef[sample['objectID']]['category_id']
         else:
             sample['objectClass'] = "unknown"
 

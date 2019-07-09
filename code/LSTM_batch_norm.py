@@ -6,14 +6,14 @@ import torch.nn as nn
 
 #torch.manual_seed(1)
 
-from ClassifierHelper import Classifier
+from ClassifierHelper import Classifier, SequenceLoss
 from ReferExpressionDataset import ReferExpressionDataset
 
 #Network Definition
 class LanguageModel(Classifier):
 
     def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, additional_feat=0):
-        super(LanguageModel, self).__init__()
+        super(LanguageModel, self).__init__(loss_function = SequenceLoss(nn.CrossEntropyLoss()))
 
         if checkpt_file is not None:
             m = re.search('hidden(?P<hidden>\d+)_feats(?P<feats>\d+)_dropout(?P<dropout>\d+)', checkpt_file)

@@ -13,12 +13,12 @@ from collections import defaultdict
 DEBUG = False
 
 class Classifier(nn.Module):
-    def __init__(self, disable_cuda=False):
+    def __init__(self, loss_function, disable_cuda=False):
         super(Classifier, self).__init__()
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
-        self.loss_function = SequenceLoss(nn.CrossEntropyLoss())
+        self.loss_function = loss_function
 
         if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
