@@ -28,6 +28,8 @@ class TruncatedResNet(ImageClassifier):
 
         if checkpt_file is not None:
             super(TruncatedResNet, self).load_model(checkpt_file)
+            
+        self.to(self.device)
 
     #Forward pass ignores average pooling and fully connected layers
     def forward(self, x, parameters=None):
@@ -65,11 +67,13 @@ class TruncatedVGGorAlex(ImageClassifier):
         if checkpoint is not None:
             super(ImageClassifier, self).load_model(checkpt_file)
 
+        self.to(self.device)
+
      # Forward pass ignores classification layers
     def forward(self, x, parameters=None):
         if self.use_cuda:
             x = x.cuda()
-            
+
         if self.ignore_classification:
             return self.VGG.features(x)
         else:
@@ -93,6 +97,7 @@ class DepthVGGorAlex(TruncatedVGGorAlex):
 
         depth_input_layer = nn.Conv2d(4, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
         self.VGG.features = nn.Sequential(depth_input_layer, *list(self.VGG.features.children())[1:])
+        self.to(self.device)
 
 class MultiplePredictionLoss(nn.Module):
     def __init__(self, loss_function, disable_cuda=False):
