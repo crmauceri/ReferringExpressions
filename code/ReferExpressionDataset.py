@@ -283,7 +283,7 @@ class ReferExpressionDataset(Dataset):
         ref = self.refer.sentToRef[sent_idx]
 
         # Load the image
-        file_name = ref['file_name']
+        file_name = self.refer.Imgs[ref['image_id']]['file_name']
         sample, raw_image, raw_depth = self.image_process.getAllImageFeatures(ref['image_id'], file_name)
 
         #Extract a crop of the target bounding box

@@ -154,11 +154,11 @@ if __name__ == "__main__":
     parser.add_argument('checkpoint_prefix',
                         help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
 
-    parser.add_argument('--img_root', help='path to the image directory', default='datasets/SUNRGBD/images')
-    parser.add_argument('--depth_root', help='path to the image directory', default='datasets/SUNRGBD/images')
-    parser.add_argument('--data_root', help='path to data directory', default='datasets/sunspot/annotations/')
-    parser.add_argument('--dataset', help='dataset name', default='sunspot')
-    parser.add_argument('--version', help='team that made the dataset splits', default='boulder')
+    parser.add_argument('--img_root', help='path to the image directory', default='datasets/coco/images/train2014')
+    parser.add_argument('--depth_root', help='path to the image directory', default='datasets/coco/images/megadepth')
+    parser.add_argument('--data_root', help='path to data directory', default='datasets/coco/refcocog')
+    parser.add_argument('--dataset', help='dataset name', default='refcocog')
+    parser.add_argument('--version', help='team that made the dataset splits', default='google')
     parser.add_argument('--epochs', dest='epochs', type=int, default=1,
                         help='Number of epochs to train (Default: 1)')
     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,

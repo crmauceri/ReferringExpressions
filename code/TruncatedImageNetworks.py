@@ -102,7 +102,7 @@ class MultiplePredictionLoss(nn.Module):
     def forward(self, embeddings, targets, per_instance=False):
         # Targets is an n-hot representing multiple correct class labels
         # Randomly select a target
-        target_index = torch.tensor([np.random.choice(r.nonzero()[0]) for r in targets], device=self.device)
+        target_index = torch.tensor([np.random.choice(r.cpu().nonzero()[0]) for r in targets], device=self.device)
 
         # Mask other targets to prevent gradient propegation
         mask = targets.clone().detach()
