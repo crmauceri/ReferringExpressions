@@ -1,30 +1,35 @@
-import os, random
-from PIL import Image, ImageDraw
+import os, random, json
+from PIL import ImageDraw, Image
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL.ImageStat import Stat
 import numpy as np
 
-class ReferExpressionDataset(Dataset):
-
-    def __init__(self, refer, dataset, vocab, disable_cuda=False, transform_size=224, image_mean=[0.485, 0.456, 0.406],
-                 image_std=[0.229, 0.224, 0.225], use_image=False, depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+# Helper class to load images
+class ImageProcessing:
+    def __init__(self, img_dir, depth_dir, data_dir,
+                 disable_cuda=False, transform_size=224,
+                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                 depth_mean=19018.9, depth_std=18798.8, use_depth=False):
 
         if not disable_cuda and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
 
-        self.active_split = None
         self.use_image = use_image
         self.use_depth = use_depth
-        self.n_contrast_object = n_contrast_object
 
-        self.refer = refer
-        self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
-        self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
-        self.sent2vocab(self.word2idx)
+        self.IMAGE_DIR = img_dir
+        self.DEPTH_DIR = depth_dir
+        self.DATA_DIR = data_dir
+
+        # load filepaths from data_root/depth.json
+        if self.DEPTH_DIR is not None:
+            depth_file = os.path.join(self.DATA_DIR, 'depth.json')
+            depth = json.load(open(depth_file, 'r'))
+            self.depth_map = {int(key):value for key,value in depth.items()}
 
         self.toTensorTransform = transforms.ToTensor()
 
@@ -40,7 +45,6 @@ class ReferExpressionDataset(Dataset):
                                   std=[depth_std])
         ])
 
-
         # Use these to visualize tensors
         rev_mean = [-1.0*image_mean[0]/image_std[0], -1.0*image_mean[1]/image_std[1], -1.0*image_mean[2]/image_std[2]]
         rev_std = [1.0/image_std[0], 1.0/image_std[1], 1.0/image_std[2]]
@@ -53,89 +57,6 @@ class ReferExpressionDataset(Dataset):
             transforms.Normalize(mean=-1 * depth_mean / depth_std, std=1 / depth_std),
             transforms.ToPILImage(mode='I')
         ])
-
-        self.index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']]
-        self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'train']
-        self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
-        self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'test']
-
-        if dataset == 'refcocog':
-            self.unique_test_objects = [ref['sent_ids'][0] for key, ref in self.refer.annToRef.items() if
-                                        ref['split'] == 'val']
-        else:
-            self.unique_test_objects = [ref['sent_ids'][0] for key,ref in self.refer.annToRef.items() if ref['split'] == 'test']
-
-    def __len__(self):
-        return self.length(self.active_split)
-
-    def __getitem__(self, item):
-        return self.getItem(item, self.active_split)
-
-    def length(self, split=None):
-        if split is None:
-            return len(self.index)
-        elif split == 'train':
-            return len(self.train_index)
-        elif split == 'test':
-            return len(self.test_index)
-        elif split == 'test_unique':
-            return len(self.unique_test_objects)
-        elif split == 'val':
-            return len(self.val_index)
-
-    def getItem(self, idx, split=None, display_image=False):
-        sample = {}
-
-        if split is None:
-            sent_idx = self.index[idx]
-        elif split == 'train':
-            sent_idx = self.train_index[idx]
-        elif split == 'test':
-            sent_idx = self.test_index[idx]
-        elif split == 'test_unique':
-            sent_idx = self.unique_test_objects[idx]
-        elif split == 'val':
-            sent_idx = self.val_index[idx]
-
-        sentence = self.refer.Sents[sent_idx]['vocab_tensor']
-        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
-        sample['vocab_tensor'] = sentence
-
-        sample['refID'] = self.refer.sentToRef[sent_idx]['ref_id']
-        sample['imageID'] = self.refer.sentToRef[sent_idx]['image_id']
-        sample['objectID'] = self.refer.sentToRef[sent_idx]['ann_id']
-
-        if('zero_shot' in self.refer.sentToRef[sent_idx]):
-            sample['zero-shot'] = self.refer.sentToRef[sent_idx]['zero_shot']
-        else:
-            sample['zero-shot'] = False
-
-        if(self.refer.annToRef[sample['objectID']]['category_id'] in self.refer.Cats):
-            sample['objectClass'] = self.refer.annToRef[sample['objectID']]['category_id']
-        else:
-            sample['objectClass'] = "unknown"
-
-        if self.use_image or display_image:
-            sample.update(self.getAllImageFeatures(sent_idx, display_image=display_image))
-
-        return sample
-
-    def sent2vocab(self, word2idx):
-        begin_index = word2idx['<bos>']
-        end_index = word2idx['<eos>']
-        unk_index = word2idx['<unk>']
-
-        for sentence in self.refer.Sents.values():
-            sentence['vocab'] = [begin_index]
-            for token in sentence['tokens']:
-                if token in word2idx:
-                    sentence['vocab'].append(word2idx[token])
-                else:
-                    sentence['vocab'].append(unk_index)
-            sentence['vocab'].append(end_index)
-
-            padding = [0.0]*(self.max_sent_len - len(sentence['vocab']))
-            sentence['vocab_tensor'] = torch.tensor(padding + sentence['vocab'], dtype=torch.long, device=self.device)
 
     def standarizeImageFormat(self, image, bbox=None):
         image = image.copy()
@@ -173,29 +94,11 @@ class ReferExpressionDataset(Dataset):
         depth = self.depth_normalize(torch.as_tensor(depth, dtype=torch.float))
         return depth
 
-    def getObject(self, bbox, image, depth=None):
-        w, h = image.size
-
-        pos = torch.tensor(
-            [bbox[0] / w, (bbox[1] + bbox[3]) / h, (bbox[0] + bbox[2]) / w, bbox[1] / h, (bbox[2] * bbox[3]) / (w * h)],
-            dtype=torch.float, device=self.device)
-        rgb_object = self.img_normalize(self.standarizeImageFormat(image, bbox=bbox))
-
-        if depth is not None:
-            d_object = self.normalizeDepth(depth, bbox=bbox)
-            rgbd_object = torch.cat((rgb_object, d_object), 0)
-            return rgbd_object, pos
-        else:
-            return rgb_object, pos
-
-    def getAllImageFeatures(self, sent_idx, display_image=False):
+    def getAllImageFeatures(self, img_idx, file_name):
         sample = dict()
 
-        ref = self.refer.sentToRef[sent_idx]
-
         # Load the image
-        img_name = os.path.join(self.refer.IMAGE_DIR,
-                                self.refer.Imgs[ref['image_id']]['file_name'])
+        img_name = os.path.join(self.IMAGE_DIR, file_name)
         raw_image = Image.open(img_name)
 
         w, h = raw_image.size
@@ -208,9 +111,8 @@ class ReferExpressionDataset(Dataset):
 
         # Load depth image
         if self.use_depth:
-            mode = 'RGBA'
-            depth_name = os.path.join(self.refer.DEPTH_DIR,
-                                      self.refer.Imgs[ref['image_id']]['depth_file_name'])
+            depth_name = os.path.join(self.DEPTH_DIR,
+                                      self.depth_map[img_idx])
             raw_depth = Image.open(depth_name)
 
             # Scale and normalize depth image
@@ -218,9 +120,171 @@ class ReferExpressionDataset(Dataset):
             sample['image'] = torch.cat((image, depth), 0)
 
         else:
-            mode = 'RGB'
-            raw_depth = None
             sample['image'] = image
+            raw_depth = None
+
+        return sample, raw_image, raw_depth
+
+#Class to load image datasets with coco style annotations
+class ImageDataset(Dataset):
+    def __init__(self, coco, img_dir, depth_dir, data_dir,
+                 disable_cuda=False, transform_size=224,
+                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                 depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+
+        if not disable_cuda and torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+        self.active_split = None
+        self.coco = coco
+        #Filter out images without object annotations
+        self.coco_index = [img_id for img_id in self.coco.imgs if len(self.coco.imgToAnns[img_id])>0]
+
+        self.image_process = ImageProcessing(img_dir, depth_dir, data_dir,
+                                             disable_cuda, transform_size, image_mean, image_std, use_image, depth_mean,
+                                             depth_std, use_depth)
+
+    def __len__(self):
+        return self.length(self.active_split)
+
+    def __getitem__(self, item):
+        return self.getItem(item, self.active_split)
+
+    def length(self, split=None):
+        return len(self.coco_index)
+
+    def getItem(self, idx, split=None):
+        sample = {}
+
+        sample['imageID'] = self.coco_index[idx]
+        sample['objectIDs'] = self.coco.getAnnIds(imgIds=sample['imageID'])
+
+        sample['objectClass'] = [self.coco.anns[id]['category_id'] for id in sample['objectIDs']]
+        sample['class_tensor'] = torch.tensor([1 if idx in sample['objectClass'] else 0 for idx in range(1000)], dtype=torch.long, device=self.device)
+
+        if self.image_process.use_image:
+            file_name = self.coco.imgs[sample['imageID']]['file_name']
+            image_features, raw_image, raw_depth = self.image_process.getAllImageFeatures(sample['imageID'], file_name)
+            sample.update(image_features)
+
+        return sample
+
+#Class to load referring expressions datasets
+class ReferExpressionDataset(Dataset):
+
+    def __init__(self, refer, depth_dir, vocab, disable_cuda=False, transform_size=224,
+                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                 depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+
+        super(ReferExpressionDataset, self).__init__()
+
+        if not disable_cuda and torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+        self.image_process = ImageProcessing(refer.IMAGE_DIR, depth_dir, refer.DATA_DIR,
+                 disable_cuda, transform_size, image_mean, image_std, use_image, depth_mean, depth_std, use_depth)
+        self.refer = refer
+        self.n_contrast_object = n_contrast_object
+
+        self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
+        self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
+        self.sent2vocab(self.word2idx)
+
+        self.index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']]
+        self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'train']
+        self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
+        self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'test']
+
+    def __len__(self):
+        return self.length(self.active_split)
+
+    def __getitem__(self, item):
+        return self.getItem(item, self.active_split)
+
+    def length(self, split=None):
+        if split is None:
+            return len(self.index)
+        elif split == 'train':
+            return len(self.train_index)
+        elif split == 'test':
+            return len(self.test_index)
+        elif split == 'val':
+            return len(self.val_index)
+
+    def getItem(self, idx, split=None, display_image=False):
+        sample = {}
+
+        if split is None:
+            sent_idx = self.index[idx]
+        elif split == 'train':
+            sent_idx = self.train_index[idx]
+        elif split == 'test':
+            sent_idx = self.test_index[idx]
+        elif split == 'val':
+            sent_idx = self.val_index[idx]
+
+        sentence = self.refer.Sents[sent_idx]['vocab_tensor']
+        sample['tokens'] = self.refer.Sents[sent_idx]['tokens']
+        sample['vocab_tensor'] = sentence
+
+        sample['refID'] = self.refer.sentToRef[sent_idx]['ref_id']
+        sample['imageID'] = self.refer.sentToRef[sent_idx]['image_id']
+        sample['objectID'] = self.refer.sentToRef[sent_idx]['ann_id']
+
+        if(self.refer.annToRef[sample['objectID']]['category_id'] in self.refer.Cats):
+            sample['objectClass'] = self.refer.annToRef[sample['objectID']]['category_id']
+        else:
+            sample['objectClass'] = "unknown"
+
+        if self.image_process.use_image or display_image:
+            image_features, raw_image, raw_depth = self.getAllImageFeatures(sent_idx, display_image=display_image)
+            sample.update(image_features)
+
+        return sample
+
+    def sent2vocab(self, word2idx):
+        begin_index = word2idx['<bos>']
+        end_index = word2idx['<eos>']
+        unk_index = word2idx['<unk>']
+
+        for sentence in self.refer.Sents.values():
+            sentence['vocab'] = [begin_index]
+            for token in sentence['tokens']:
+                if token in word2idx:
+                    sentence['vocab'].append(word2idx[token])
+                else:
+                    sentence['vocab'].append(unk_index)
+            sentence['vocab'].append(end_index)
+
+            padding = [0.0]*(self.max_sent_len - len(sentence['vocab']))
+            sentence['vocab_tensor'] = torch.tensor(padding + sentence['vocab'], dtype=torch.long, device=self.device)
+
+    def getObject(self, bbox, image, depth=None):
+        w, h = image.size
+
+        pos = torch.tensor(
+            [bbox[0] / w, (bbox[1] + bbox[3]) / h, (bbox[0] + bbox[2]) / w, bbox[1] / h, (bbox[2] * bbox[3]) / (w * h)],
+            dtype=torch.float, device=self.device)
+        rgb_object = self.image_process.img_normalize(self.image_process.standarizeImageFormat(image, bbox=bbox))
+
+        if depth is not None:
+            d_object = self.image_process.normalizeDepth(depth, bbox=bbox)
+            rgbd_object = torch.cat((rgb_object, d_object), 0)
+            return rgbd_object, pos
+        else:
+            return rgb_object, pos
+
+    def getAllImageFeatures(self, sent_idx, display_image=False):
+
+        ref = self.refer.sentToRef[sent_idx]
+
+        # Load the image
+        file_name = ref['file_name']
+        sample, raw_image, raw_depth = self.image_process.getAllImageFeatures(ref['image_id'], file_name)
 
         #Extract a crop of the target bounding box
         bbox = self.refer.Anns[ref['ann_id']]['bbox']
@@ -243,18 +307,14 @@ class ReferExpressionDataset(Dataset):
             draw = ImageDraw.Draw(raw_image)
             draw.rectangle(bbox, fill=None, outline=(255, 0, 0, 255))
             del draw
-            sample['PIL'] = raw_image
 
-        return sample
+        return sample, raw_image, raw_depth
 
 
 # Test data loader
 if __name__ == "__main__":
     import argparse
-    from tqdm import tqdm
     from refer import REFER
-    from torch.utils.data import DataLoader
-    from PIL import Image
     import matplotlib.pyplot as plt
 
     parser = argparse.ArgumentParser(description='Test dataset loading')
@@ -265,27 +325,43 @@ if __name__ == "__main__":
     parser.add_argument('--version', help='team that made the dataset splits', default='boulder')
     args = parser.parse_args()
 
+    #ReferExpressionDataset test
     with open('datasets/vocab_file.txt', 'r') as f:
         vocab = f.read().split()
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = REFER(data_root=args.data_root, image_dir=args.img_root, depth_dir=args.depth_root, dataset=args.dataset, version=args.version)
-    refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True, use_depth=True, n_contrast_object=1)
+    refer = REFER(data_root=args.data_root, image_dir=args.img_root, dataset=args.dataset, version=args.version)
+    refer_dataset = ReferExpressionDataset(refer, args.depth_root, vocab, use_image=True, use_depth=True, n_contrast_object=1)
     sample = refer_dataset.getItem(0, display_image=True)
-    sample['PIL'].show()
+    # sample['raw_image'].show()
 
-    image = refer_dataset.rev_img_normalize(sample['image'][0:3, :, :])
+    image = refer_dataset.image_process.rev_img_normalize(sample['image'][0:3, :, :])
     image.show()
     plt.imshow(sample['image'][3, :, :])
     plt.show()
 
-    object_img = refer_dataset.rev_img_normalize(sample['object'][0:3, :, :])
+    object_img = refer_dataset.image_process.rev_img_normalize(sample['object'][0:3, :, :])
     object_img.show()
     plt.imshow(sample['object'][3, :, :])
     plt.show()
 
-    contrast_img = refer_dataset.rev_img_normalize(sample['contrast'][0]['object'][0:3, :, :])
+    contrast_img = refer_dataset.image_process.rev_img_normalize(sample['contrast'][0]['object'][0:3, :, :])
     contrast_img.show()
     plt.imshow(sample['contrast'][0]['object'][3, :, :])
     plt.show()
+
+    #ImageDataset test
+    from pycocotools.coco import COCO
+    coco_data = COCO(os.path.join(args.data_root, 'instances.json'))
+    coco_dataset = ImageDataset(coco_data, args.img_root, args.depth_root, args.data_root, use_image=True, use_depth=True)
+
+    sample = coco_dataset.getItem(0)
+    # sample['raw_image'].show()
+
+    image = coco_dataset.image_process.rev_img_normalize(sample['image'][0:3, :, :])
+    image.show()
+    plt.imshow(sample['image'][3, :, :])
+    plt.show()
+
+    input("Enter to exit")

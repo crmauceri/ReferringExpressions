@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # Add the start and end tokens
     vocab.extend(['<bos>', '<eos>', '<unk>'])
 
-    refer = REFER(data_root=args.data_root, image_dir=args.img_root, depth_dir=args.depth_root, dataset=args.dataset,
+    refer = REFER(data_root=args.data_root, image_dir=args.img_root, dataset=args.dataset,
                   version=args.version)
 
     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout, args.l2_fraction)
@@ -191,12 +191,12 @@ if __name__ == "__main__":
         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)
 
     if args.mode == 'train':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True, use_depth=True)
+        refer_dataset = ReferExpressionDataset(refer, args.depth_root, vocab, use_image=True, use_depth=True)
         print("Start Training")
         total_loss = model.run_training(args.epochs, refer_dataset, args.checkpoint_prefix, parameters={'use_image': True},
                                         learning_rate=args.learningrate, batch_size=args.batch_size, l2_reg_fraction=model.l2_fraction)
     if args.mode == 'comprehend':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, n_contrast_object=float('inf'), use_depth=True)
+        refer_dataset = ReferExpressionDataset(refer, args.depth_root, vocab, n_contrast_object=float('inf'), use_depth=True)
         print("Start Comprehension")
         if args.dataset=='refcocog':
             output = model.run_comprehension(refer_dataset, split='val')
@@ -212,7 +212,7 @@ if __name__ == "__main__":
                 writer.writerow(exp)
 
     if args.mode == 'test':
-        refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True, use_depth=True)
+        refer_dataset = ReferExpressionDataset(refer, args.depth_root, vocab, use_image=True, use_depth=True)
         print("Start Testing")
         generated_exp = model.run_generate(refer_dataset, split='test_unique')
 
