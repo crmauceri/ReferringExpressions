@@ -8,22 +8,22 @@ import numpy as np
 
 # Helper class to load images
 class ImageProcessing:
-    def __init__(self, img_dir, depth_dir, data_dir,
-                 disable_cuda=False, transform_size=224,
-                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
-                 depth_mean=19018.9, depth_std=18798.8, use_depth=False):
+    def __init__(self, cfg): #img_dir, depth_dir, data_dir,
+                 #disable_cuda=False, transform_size=224,
+                 #image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                 #depth_mean=19018.9, depth_std=18798.8, use_depth=False):
 
-        if not disable_cuda and torch.cuda.is_available():
+        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
 
-        self.use_image = use_image
-        self.use_depth = use_depth
+        self.use_image = cfg.IMG_PROCESSING.USE_IMAGE
+        self.use_depth = cfg.IMG_PROCESSING.USE_DEPTH
 
-        self.IMAGE_DIR = img_dir
-        self.DEPTH_DIR = depth_dir
-        self.DATA_DIR = data_dir
+        self.IMAGE_DIR = cfg.DATASET.IMG_ROOT
+        self.DEPTH_DIR = cfg.DATASET.DEPTH_ROOT
+        self.DATA_DIR = cfg.DATASET.DATA_ROOT
 
         # load filepaths from data_root/depth.json
         if self.DEPTH_DIR is not None:
@@ -33,13 +33,17 @@ class ImageProcessing:
 
         self.toTensorTransform = transforms.ToTensor()
 
-        self.image_size = transform_size
+        image_mean = cfg.IMG_PROCESSING.IMG_MEAN
+        image_std = cfg.IMG_PROCESSING.IMG_STD
+        self.image_size = cfg.IMG_PROCESSING.TRANSFORM_SIZE
         self.img_normalize = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=image_mean,
                                  std=image_std)
             ])
 
+        depth_mean = cfg.IMG_PROCESSING.DEPTH_MEAN
+        depth_std = cfg.IMG_PROCESSING.DEPTH_STD
         self.depth_normalize = transforms.Compose([
             transforms.Normalize(mean=[depth_mean],
                                   std=[depth_std])
@@ -127,12 +131,12 @@ class ImageProcessing:
 
 #Class to load image datasets with coco style annotations
 class ImageDataset(Dataset):
-    def __init__(self, coco, img_dir, depth_dir, data_dir,
-                 disable_cuda=False, transform_size=224,
-                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
-                 depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+    def __init__(self, coco, cfg): #coco, img_dir, depth_dir, data_dir,
+                 #disable_cuda=False, transform_size=224,
+                 #image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                 #depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
 
-        if not disable_cuda and torch.cuda.is_available():
+        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
@@ -142,9 +146,7 @@ class ImageDataset(Dataset):
         #Filter out images without object annotations
         self.coco_index = [img_id for img_id in self.coco.imgs if len(self.coco.imgToAnns[img_id])>0]
 
-        self.image_process = ImageProcessing(img_dir, depth_dir, data_dir,
-                                             disable_cuda, transform_size, image_mean, image_std, use_image, depth_mean,
-                                             depth_std, use_depth)
+        self.image_process = ImageProcessing(cfg)
 
     def __len__(self):
         return self.length(self.active_split)
@@ -174,21 +176,27 @@ class ImageDataset(Dataset):
 #Class to load referring expressions datasets
 class ReferExpressionDataset(Dataset):
 
-    def __init__(self, refer, depth_dir, vocab, disable_cuda=False, transform_size=224,
-                 image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
-                 depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+    def __init__(self, refer, cfg): #depth_dir, vocab, disable_cuda=False, transform_size=224,
+                # image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
+                # depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
 
         super(ReferExpressionDataset, self).__init__()
 
-        if not disable_cuda and torch.cuda.is_available():
+        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
 
-        self.image_process = ImageProcessing(refer.IMAGE_DIR, depth_dir, refer.DATA_DIR,
-                 disable_cuda, transform_size, image_mean, image_std, use_image, depth_mean, depth_std, use_depth)
+        self.image_process = ImageProcessing(cfg)
         self.refer = refer
-        self.n_contrast_object = n_contrast_object
+        self.n_contrast_object = cfg.TRAINING.N_CONSTRAST_OBJECT
+
+        # Load the vocabulary
+        with open(cfg.DATASET.VOCAB, 'r') as f:
+            vocab = f.read().split()
+
+        # Add the start and end tokens
+        vocab.extend(['<bos>', '<eos>', '<unk>'])
 
         self.max_sent_len = max([len(sent['tokens']) for sent in self.refer.Sents.values()]) + 2 #For the begining and end tokens
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
@@ -311,10 +319,11 @@ class ReferExpressionDataset(Dataset):
         return sample, raw_image, raw_depth
 
 
+# TODO rewrite with config file
 # Test data loader
 if __name__ == "__main__":
     import argparse
-    from refer import REFER
+    from .refer import REFER
     import matplotlib.pyplot as plt
 
     parser = argparse.ArgumentParser(description='Test dataset loading')

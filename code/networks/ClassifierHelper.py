@@ -1,26 +1,23 @@
-import random, os
 from tqdm import *
 
 import torch
-import torch.autograd as autograd
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
-from collections import defaultdict
 
 #torch.manual_seed(1)
 
 DEBUG = False
 
 class Classifier(nn.Module):
-    def __init__(self, loss_function, disable_cuda=False):
+    def __init__(self, cfg, loss_function):
         super(Classifier, self).__init__()
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
         self.loss_function = loss_function
 
-        if not disable_cuda and torch.cuda.is_available():
+        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
             self.use_cuda = True
             print("Using cuda")
@@ -55,17 +52,18 @@ class Classifier(nn.Module):
     def checkpt_file(self, checkpt_prefix):
         return '{}.mdl'.format(checkpt_prefix)
 
-    def run_training(self, n_epochs, refer_dataset, checkpt_prefix, parameters=None, learning_rate=0.001, batch_size=4, l2_reg_fraction=0):
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=learning_rate, weight_decay=l2_reg_fraction)
+    def run_training(self, refer_dataset, cfg):
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
+                               lr=cfg.TRAINING.LEARNING_RATE, weight_decay=cfg.TRAINING.L2_FRACTION)
 
         refer_dataset.active_split = 'train'
 
         if self.use_cuda:
-            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True)
+            dataloader = DataLoader(refer_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True)
         else:
-            dataloader = DataLoader(refer_dataset, batch_size, shuffle=True, num_workers=4)
+            dataloader = DataLoader(refer_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True, num_workers=4)
 
-        for epoch in range(self.start_epoch, n_epochs):
+        for epoch in range(self.start_epoch, cfg.TRAINING.N_EPOCH):
             self.train()
             refer_dataset.active_split = 'train'
             self.total_loss.append(0)
@@ -76,7 +74,7 @@ class Classifier(nn.Module):
                 self.clear_gradients(batch_size=targets.size()[0])
 
                 loss = 0
-                label_scores = self(instances, parameters)
+                label_scores = self(instances, cfg)
                 loss += self.loss_function(label_scores, targets)
 
                 if DEBUG:

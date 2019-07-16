@@ -1,4 +1,4 @@
-from MaoEtAl_baseline import LanguagePlusImage
+from networks.MaoEtAl_baseline import LanguagePlusImage
 import matplotlib.pyplot as plt
 
 plt.figure(1, figsize=(9, 9))

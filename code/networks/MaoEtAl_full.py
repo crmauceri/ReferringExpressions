@@ -1,16 +1,10 @@
-import argparse, os
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#torch.manual_seed(1)
+from .MaoEtAl_baseline import LanguagePlusImage
+from .ClassifierHelper import SequenceLoss
 
-from MaoEtAl_baseline import LanguagePlusImage
-from ReferExpressionDataset import ReferExpressionDataset
-from ClassifierHelper import SequenceLoss
-
-from refer import REFER
 
 # As described in "Generation and comprehension of unambiguous object descriptions."
 # Mao, Junhua, et al.
@@ -20,8 +14,8 @@ from refer import REFER
 #Network Definition
 class LanguagePlusImage_Contrast(LanguagePlusImage):
 
-    def __init__(self, checkpt_file=None, vocab=None, hidden_dim=None, dropout=0):
-        super(LanguagePlusImage_Contrast, self).__init__(checkpt_file, vocab, hidden_dim, dropout)
+    def __init__(self, cfg):
+        super(LanguagePlusImage_Contrast, self).__init__(cfg)
 
         self.loss_function = MMI_softmax_Loss()
 
@@ -140,52 +134,52 @@ class MMI_softmax_Loss(nn.Module):
         # Concatenate image representations
         return torch.cat([image_out.repeat(object_out.size()[0], 1), object_out, pos], 1)
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')
-    parser.add_argument('mode', help='train/test')
-    parser.add_argument('checkpoint_prefix',
-                        help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
-
-    parser.add_argument('--img_root', help='path to the image directory', default='pyutils/refer_python3/data/images/mscoco/train2014/')
-    parser.add_argument('--data_root', help='path to data directory', default='pyutils/refer_python3/data')
-    parser.add_argument('--dataset', help='dataset name', default='refcocog')
-    parser.add_argument('--splitBy', help='team that made the dataset splits', default='google')
-    parser.add_argument('--epochs', dest='epochs', type=int, default=1,
-                        help='Number of epochs to train (Default: 1)')
-    parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
-                        help='Size of LSTM embedding (Default:100)')
-    parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
-    parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
-    parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
-                        help='Training batch size')
-
-
-    args = parser.parse_args()
-
-    with open('vocab_file.txt', 'r') as f:
-        vocab = f.read().split()
-    # Add the start and end tokens
-    vocab.extend(['<bos>', '<eos>', '<unk>'])
-
-    refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=2)
-
-    checkpt_file = LanguagePlusImage_Contrast.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
-    if (os.path.isfile(checkpt_file)):
-        model = LanguagePlusImage_Contrast(checkpt_file=checkpt_file, vocab=vocab)
-    else:
-        model = LanguagePlusImage_Contrast(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
-
-    if args.mode == 'train':
-        print("Start Training")
-        total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
-                                        learning_rate=args.learningrate, batch_size=args.batch_size)
-        #total_loss = model.run_testing(refer, split='train', parameters={'use_image': True})
-
-    if args.mode == 'test':
-        print("Start Testing")
-        for i in range(10, 20):
-            item = refer.getItem(i, split='val', use_image=True, display_image=True)
-            item['PIL'].show()
-            print(model.generate("<bos>", item))
-            input('Any key to continue')
+# if __name__ == "__main__":
+#
+#     parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')
+#     parser.add_argument('mode', help='train/test')
+#     parser.add_argument('checkpoint_prefix',
+#                         help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
+#
+#     parser.add_argument('--img_root', help='path to the image directory', default='pyutils/refer_python3/data/images/mscoco/train2014/')
+#     parser.add_argument('--data_root', help='path to data directory', default='pyutils/refer_python3/data')
+#     parser.add_argument('--dataset', help='dataset name', default='refcocog')
+#     parser.add_argument('--splitBy', help='team that made the dataset splits', default='google')
+#     parser.add_argument('--epochs', dest='epochs', type=int, default=1,
+#                         help='Number of epochs to train (Default: 1)')
+#     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
+#                         help='Size of LSTM embedding (Default:100)')
+#     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
+#     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
+#     parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
+#                         help='Training batch size')
+#
+#
+#     args = parser.parse_args()
+#
+#     with open('vocab_file.txt', 'r') as f:
+#         vocab = f.read().split()
+#     # Add the start and end tokens
+#     vocab.extend(['<bos>', '<eos>', '<unk>'])
+#
+#     refer = ReferExpressionDataset(args.img_root, args.data_root, args.dataset, args.splitBy, vocab, use_image=True, n_contrast_object=2)
+#
+#     checkpt_file = LanguagePlusImage_Contrast.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout)
+#     if (os.path.isfile(checkpt_file)):
+#         model = LanguagePlusImage_Contrast(checkpt_file=checkpt_file, vocab=vocab)
+#     else:
+#         model = LanguagePlusImage_Contrast(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout)
+#
+#     if args.mode == 'train':
+#         print("Start Training")
+#         total_loss = model.run_training(args.epochs, refer, args.checkpoint_prefix, parameters={'use_image': True},
+#                                         learning_rate=args.learningrate, batch_size=args.batch_size)
+#         #total_loss = model.run_testing(refer, split='train', parameters={'use_image': True})
+#
+#     if args.mode == 'test':
+#         print("Start Testing")
+#         for i in range(10, 20):
+#             item = refer.getItem(i, split='val', use_image=True, display_image=True)
+#             item['PIL'].show()
+#             print(model.generate("<bos>", item))
+#             input('Any key to continue')

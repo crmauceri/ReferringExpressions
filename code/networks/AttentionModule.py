@@ -10,15 +10,17 @@ import torch.nn as nn
 # Implemented by Cecilia Mauceri
 
 class AttentionModule(nn.Module):
-    def __init__(self, k, d, m, use_cuda=False):
+    def __init__(self, cfg):
         super(AttentionModule, self).__init__()
-        self.k = k
-        self.d = d
-        self.m = m
+        self.k = cfg.LSTM.HIDDEN
+        self.d = cfg.LSTM.EMBED
+        self.m = cfg.IMG_NET.FEATS
 
-        if use_cuda:
+        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
+            use_cuda = True
             dtype = torch.cuda.FloatTensor
         else:
+            use_cuda = False
             dtype = torch.FloatTensor
 
         self.W_word = nn.Linear(self.d, self.k, 1)

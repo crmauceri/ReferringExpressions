@@ -34,20 +34,20 @@ from pycocotools import mask
 
 class REFER:
 
-    def __init__(self, data_root, image_dir, dataset, version):
+    def __init__(self, cfg): # data_root, image_dir, dataset, version):
         # provide data_root folder which contains refclef, refcoco, refcoco+ and refcocog
         # also provide dataset name and splitBy information
         # e.g., dataset = 'refcoco', splitBy = 'unc'
-        print('loading dataset %s into memory...' % dataset)
+        print('loading dataset %s into memory...' % cfg.DATASET.NAME)
         self.ROOT_DIR = osp.abspath(osp.dirname(__file__))
-        self.DATA_DIR = data_root
-        self.IMAGE_DIR = image_dir
+        self.DATA_DIR = cfg.DATASET.DATA_ROOT
+        self.IMAGE_DIR = cfg.DATASET.IMG_ROOT
 
         # load refs from data_root/refs(splitBy).json
         tic = time.time()
-        ref_file = osp.join(self.DATA_DIR, 'refs(' + version + ').p')
+        ref_file = osp.join(self.DATA_DIR, 'refs(' + cfg.DATASET.VERSION + ').p')
         self.data = {}
-        self.data['dataset'] = dataset
+        self.data['dataset'] = cfg.DATASET.NAME
         with open(ref_file, 'rb') as f:
             self.data['refs'] = pickle.load(f)
 
@@ -284,6 +284,7 @@ class REFER:
         ax = plt.gca()
         ax.imshow(msk)
 
+## TODO rewrite with config file
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Test dataset loading')

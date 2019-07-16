@@ -1,0 +1,16 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_depth
+
+DATASET:
+  NAME: refcocog
+  VERSION: google
+  DATA_ROOT: datasets/coco/refcocog
+  IMG_ROOT: datasets/coco/images/train2014/
+  DEPTH_ROOT: datasets/coco/images/megadepth/
+
+IMG_PROCESSING:
+  USE_DEPTH: True
+
+OUTPUT:
+  CHECKPOINT_PREFIX: maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl
+
