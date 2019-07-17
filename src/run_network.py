@@ -3,10 +3,10 @@ from csv import DictWriter
 
 import torch
 
-from config import cfg
-from networks.NetworkFactory import networkFactory
-from data_management.ReferExpressionDataset import ReferExpressionDataset
-from data_management.refer import REFER
+from .config import cfg
+from .networks.NetworkFactory import networkFactory
+from .data_management.ReferExpressionDataset import ReferExpressionDataset
+from .data_management.refer import REFER
 
 if __name__ == "__main__":
 
@@ -26,10 +26,7 @@ if __name__ == "__main__":
     refer = REFER(cfg)
     refer_dataset = ReferExpressionDataset(refer, cfg)
 
-    model = networkFactory(cfg)
-    checkpt_file = model.checkpt_file(cfg.OUTPUT.CHECKPOINT_PREFIX)
-    if os.path.exists(checkpt_file):
-        model.load_model(checkpt_file)
+    model = networkFactory(cfg) #Loads network from checkpoint if exists
 
     if args.mode == 'train':
         print("Start Training")
@@ -41,8 +38,7 @@ if __name__ == "__main__":
         else:
             output = model.run_comprehension(refer_dataset, split='test')
 
-        with open('{}_{}_{}_comprehension.csv'.format(model.checkpt_file().replace('models', 'output'),
-                                                      cfg.DATASET.NAME, model.start_epoch), 'w') as fw:
+        with open(model.comprehension_output_file(cfg), 'w') as fw:
             fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'p@1', 'p@2', 'zero-shot']
             writer = DictWriter(fw, fieldnames=fieldnames)
 
@@ -54,8 +50,7 @@ if __name__ == "__main__":
         print("Start Testing")
         generated_exp = model.run_generate(refer_dataset, split='test_unique')
 
-        with open('{}_{}_{}_generated.csv'.format(model.checkpt_file().replace('models', 'output'),
-                                                  cfg.DATASET.NAME, model.start_epoch), 'w') as fw:
+        with open(model.generated_output_file(cfg), 'w') as fw:
             fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']
             writer = DictWriter(fw, fieldnames=fieldnames)
 

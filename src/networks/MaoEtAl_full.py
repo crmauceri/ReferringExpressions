@@ -19,7 +19,7 @@ class LanguagePlusImage_Contrast(LanguagePlusImage):
 
         self.loss_function = MMI_softmax_Loss()
 
-    def forward(self, ref, parameters):
+    def forward(self, ref):
         feats, contrast = self.image_forward(ref)
 
         #Input to LanguageModel

@@ -1,0 +1,21 @@
+MODEL:
+  ARCHITECTURE: DepthVGGorAlex
+
+DATASET:
+  NAME: coco
+  VERSION: boulder
+  DATA_ROOT: datasets/coco/annotations/
+  IMG_ROOT: datasets/coco/images/train2014/
+  DEPTH_ROOT: datasets/coco/images/megadepth/
+
+IMG_PROCESSING:
+  USE_DEPTH: True
+
+OUTPUT:
+  CHECKPOINT_PREFIX: depth_image_classifier
+
+TRAINING:
+  L2_FRACTION: 5e-4
+  LEARNING_RATE: 0.01
+  N_EPOCH: 100
+  DROPOUT: 0.5

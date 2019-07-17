@@ -54,7 +54,7 @@ class LanguageModel(Classifier):
     def checkpt_file(self, checkpt_file):
         return self.get_checkpt_file(checkpt_file, self.hidden_dim, self.feats_dim, self.dropout_p)
 
-    def forward(self, ref=None, parameters=None):
+    def forward(self, ref=None):
         sentence = ref['vocab_tensor'][:, :-1]
         embeds = self.embedding(sentence)
         embeds = self.dropout1(embeds)

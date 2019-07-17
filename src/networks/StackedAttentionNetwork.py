@@ -36,7 +36,7 @@ class SAN(Classifier):
         self.to(self.device)
 
 
-    def forward(self, instance, parameters):
+    def forward(self, instance):
         #Image features
         image = instance['image']
         if self.use_cuda:

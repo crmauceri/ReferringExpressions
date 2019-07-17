@@ -1,0 +1,18 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_depth
+  USE_PRETRAINED: True
+  PRETRAINED: model/maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl
+
+DATASET:
+  NAME: sunspot
+  VERSION: boulder
+  DATA_ROOT: datasets/sunspot/annotations/
+  IMG_ROOT: datasets/sunspot/images/
+  DEPTH_ROOT: datasets/sunspot/images/
+
+IMG_PROCESSING:
+  USE_DEPTH: True
+
+OUTPUT:
+  CHECKPOINT_PREFIX: maoetal_depth_sunspot_hidden1024_feats2005_dropout0.0_l21.0e-05
+

@@ -31,7 +31,7 @@ class LanguagePlusImage(Classifier):
 
         self.to(self.device)
 
-    def forward(self, ref, parameters):
+    def forward(self, ref):
         ref['feats'] = self.image_forward(ref)
 
         #Input to LanguageModel

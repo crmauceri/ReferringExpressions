@@ -42,7 +42,7 @@ class LanguageModel(Classifier):
         return (torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True),
                 torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True))
 
-    def forward(self, ref=None, parameters=None):
+    def forward(self, ref=None):
         sentence = ref['vocab_tensor'][:, :-1]
         embeds = self.embedding(sentence)
         embeds = self.dropout1(embeds)

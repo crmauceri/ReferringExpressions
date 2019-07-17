@@ -21,7 +21,7 @@ class TruncatedResNet(ImageClassifier):
         self.to(self.device)
 
     #Forward pass ignores average pooling and fully connected layers
-    def forward(self, x, parameters=None):
+    def forward(self, x):
         if self.use_cuda:
             x = x.cuda()
         x = self.ResNet.conv1(x)
@@ -56,7 +56,7 @@ class TruncatedVGGorAlex(ImageClassifier):
         self.to(self.device)
 
      # Forward pass ignores classification layers
-    def forward(self, x, parameters=None):
+    def forward(self, x):
         if self.use_cuda:
             x = x.cuda()
 

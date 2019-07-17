@@ -49,8 +49,21 @@ class Classifier(nn.Module):
         print("=> saving checkpoint '{}'".format(self.checkpt_file(checkpt_prefix)))
         torch.save(params, self.checkpt_file(checkpt_prefix))
 
-    def checkpt_file(self, checkpt_prefix):
-        return '{}.mdl'.format(checkpt_prefix)
+    @staticmethod
+    def checkpt_file(cfg, epoch):
+        return 'checkpoints/{}.mdl.checkpoint{}'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, epoch)
+
+    @staticmethod
+    def model_file(cfg):
+        return 'models/{}.mdl'.format(cfg.OUTPUT.CHECKPOINT_PREFIX)
+
+    @staticmethod
+    def generated_output_file(cfg):
+        return 'output/{}_{}_generated.csv'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
+
+    @staticmethod
+    def comprehension_output_file(cfg):
+        'output/{}_{}_comprehension.csv'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
 
     def run_training(self, refer_dataset, cfg):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
@@ -74,7 +87,7 @@ class Classifier(nn.Module):
                 self.clear_gradients(batch_size=targets.size()[0])
 
                 loss = 0
-                label_scores = self(instances, cfg)
+                label_scores = self(instances)
                 loss += self.loss_function(label_scores, targets)
 
                 if DEBUG:
@@ -94,7 +107,7 @@ class Classifier(nn.Module):
             self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch)
 
             self.clear_gradients(batch_size=1)
-            self.save_model(checkpt_prefix, {
+            self.save_model(Classifier.model_file(cfg), {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
                 'total_loss': self.total_loss,
@@ -103,19 +116,19 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % 2 == 0:
-                self.save_model('checkpoints/{}.checkpoint{}'.format(checkpt_prefix, epoch), {
+                self.save_model(Classifier.checkpt_file(cfg, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
                     'total_loss': self.total_loss,
                     'val_loss': self.val_loss})
 
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', parameters, batch_size)
+                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
-    def run_testing(self, refer_dataset, split=None, parameters=None, batch_size=4):
+    def run_testing(self, refer_dataset, split=None, batch_size=4):
         self.eval()
         refer_dataset.active_split = split
         dataloader = DataLoader(refer_dataset, batch_size=batch_size)
@@ -126,14 +139,14 @@ class Classifier(nn.Module):
                 instances, targets = self.trim_batch(instance)
                 self.clear_gradients(batch_size=targets.size()[0])
 
-                label_scores = self(instances, parameters)
+                label_scores = self(instances)
                 total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(k)
 
     def trim_batch(self, instance):
         pass
 
-    def run_generate(self, refer_dataset, split=None, parameters=None):
+    def run_generate(self, refer_dataset, split=None):
         refer_dataset.active_split = split
         n = len(refer_dataset)
         dataloader = DataLoader(refer_dataset)

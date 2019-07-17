@@ -12,5 +12,5 @@ IMG_PROCESSING:
   USE_DEPTH: True
 
 OUTPUT:
-  CHECKPOINT_PREFIX: maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl
+  CHECKPOINT_PREFIX: maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05
 

@@ -8,6 +8,8 @@ _C = CN()
 _C.MODEL = CN()
 # Which network to run
 _C.MODEL.ARCHITECTURE = "MaoEtAl_baseline"
+_C.MODEL.USE_PRETRAINED = False
+_C.MODEL.PRETRAINED = ""
 _C.MODEL.DISABLE_CUDA = False
 
 _C.DATASET = CN()
