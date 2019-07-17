@@ -6,10 +6,10 @@ def networkFactory(cfg):
         model = networks.MaoEtAl_baseline.LanguagePlusImage(cfg)
     elif cfg.MODEL.ARCHITECTURE=="MaoEtAl_depth":
         import networks.MaoEtAl_depth
-        model = networks.MaoEtAl_depth.LanguagePlusImage(cfg)
+        model = networks.MaoEtAl_depth.LanguagePlusDepthImage(cfg)
     elif cfg.MODEL.ARCHITECTURE=="MaoEtAl_full":
         import networks.MaoEtAl_full
-        model = networks.MaoEtAl_full.LanguagePlusImage(cfg)
+        model = networks.MaoEtAl_full.LanguagePlusImage_Contrast(cfg)
     elif cfg.MODEL.ARCHITECTURE=="DepthVGGorAlex":
         import networks.TruncatedImageNetworks
         import torchvision.models as models

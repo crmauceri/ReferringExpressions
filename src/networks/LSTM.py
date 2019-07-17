@@ -94,6 +94,9 @@ class LanguageModel(Classifier):
 
         return sentence
 
+    def test(self, instance):
+        return self.generate(instance=instance)
+
 # if __name__ == "__main__":
 #
 #     parser = argparse.ArgumentParser(description='Classify missing words with LSTM.')

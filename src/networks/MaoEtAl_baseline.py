@@ -1,10 +1,6 @@
-import os
-
 import torch
 import torch.nn as nn
 import torchvision.models as models
-
-#torch.manual_seed(1)
 
 from .TruncatedImageNetworks import TruncatedVGGorAlex
 from .LSTM import LanguageModel
@@ -22,13 +18,8 @@ import numpy as np
 #Network Definition
 class LanguagePlusImage(Classifier):
 
-    def __init__(self, cfg): #checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, l2_fraction=1e-5):
+    def __init__(self, cfg):
         super(LanguagePlusImage, self).__init__(cfg, loss_function = SequenceLoss(nn.CrossEntropyLoss()))
-
-        # self.feats_dim = cfg.IMG_NET.FEATS
-        # self.hidden_dim = cfg.LSTM.HIDDEN
-        # self.dropout_p = cfg.TRAINING.DROPOUT
-        # self.l2_fraction = cfg.TRAINING.L2_FRACTION
 
         #Text Embedding Network
         self.wordnet = LanguageModel(cfg)
@@ -72,6 +63,23 @@ class LanguagePlusImage(Classifier):
     def clear_gradients(self, batch_size):
         super(LanguagePlusImage, self).clear_gradients()
         self.wordnet.clear_gradients(batch_size)
+
+    def run_generate(self, refer_dataset, split=None):
+        refer_dataset.active_split = split
+        n = len(refer_dataset)
+        dataloader = DataLoader(refer_dataset)
+
+        generated_exp = [0]*len(refer_dataset)
+        for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
+            instances, targets = self.trim_batch(instance)
+            generated_exp[k] = dict()
+            generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
+            generated_exp[k]['refID'] = instance['refID'].item()
+            generated_exp[k]['imgID'] = instance['imageID'].item()
+            generated_exp[k]['objID'] = instance['objectID'][0]
+            generated_exp[k]['objClass'] = instance['objectClass'][0]
+
+        return generated_exp
 
     def generate(self, start_word, instance=None, feats=None):
         with torch.no_grad():
@@ -127,87 +135,3 @@ class LanguagePlusImage(Classifier):
         instances = {}
         label_scores = self.forward(instances)
         sum(label_scores(target))
-
-# if __name__ == "__main__":
-#
-#     parser = argparse.ArgumentParser(description='Generate referring expression for target object given bounding box and image')
-#     parser.add_argument('mode', help='train/test/comprehend')
-#     parser.add_argument('checkpoint_prefix',
-#                         help='Filepath to save/load checkpoint. If file exists, checkpoint will be loaded')
-#
-#     parser.add_argument('--img_root', help='path to the image directory', default='datasets/SUNRGBD/images')
-#     parser.add_argument('--depth_root', help='path to the image directory', default='datasets/SUNRGBD/images')
-#     parser.add_argument('--data_root', help='path to data directory', default='datasets/sunspot/annotations/')
-#     parser.add_argument('--dataset', help='dataset name', default='sunspot')
-#     parser.add_argument('--version', help='team that made the dataset splits', default='boulder')
-#     parser.add_argument('--epochs', dest='epochs', type=int, default=1,
-#                         help='Number of epochs to train (Default: 1)')
-#     parser.add_argument('--hidden_dim', dest='hidden_dim', type=int, default=1024,
-#                         help='Size of LSTM embedding (Default:100)')
-#     parser.add_argument('--dropout', dest='dropout', type=float, default=0, help='Dropout probability')
-#     parser.add_argument('--l2_fraction', dest='l2_fraction', type=float, default=1e-5, help='L2 Regularization Fraction')
-#     parser.add_argument('--learningrate', dest='learningrate', type=float, default=0.001, help='Adam Optimizer Learning Rate')
-#     parser.add_argument('--batch_size', dest='batch_size', type=int, default=16,
-#                         help='Training batch size')
-#     parser.add_argument('--DEBUG', type=bool, default=False, help="Sets random seed to fixed value")
-#
-#     args = parser.parse_args()
-#
-#     if args.DEBUG:
-#         torch.manual_seed(1)
-#
-#     with open('datasets/vocab_file.txt', 'r') as f:
-#         vocab = f.read().split()
-#     # Add the start and end tokens
-#     vocab.extend(['<bos>', '<eos>', '<unk>'])
-#
-#     refer = REFER(data_root=args.data_root, image_dir=args.img_root, depth_dir=args.depth_root, dataset=args.dataset,
-#                   version=args.version)
-#
-#     checkpt_file = LanguagePlusImage.get_checkpt_file(args.checkpoint_prefix, args.hidden_dim, 2005, args.dropout, args.l2_fraction)
-#     if (os.path.isfile(checkpt_file)):
-#         print(checkpt_file)
-#         model = LanguagePlusImage(checkpt_file=checkpt_file, vocab=vocab)
-#     else:
-#         model = LanguagePlusImage(vocab=vocab, hidden_dim=args.hidden_dim, dropout=args.dropout, l2_fraction=args.l2_fraction)
-#
-#     if args.mode == 'train':
-#         refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True)
-#         print("Start Training")
-#         total_loss = model.run_training(args.epochs, refer_dataset, args.checkpoint_prefix, parameters={'use_image': True},
-#                                         learning_rate=args.learningrate, batch_size=args.batch_size, l2_reg_fraction=model.l2_fraction)
-#     if args.mode == 'comprehend':
-#         refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, n_contrast_object=float('inf'))
-#         print("Start Comprehension")
-#         if args.dataset=='refcocog':
-#             output = model.run_comprehension(refer_dataset, split='val')
-#         else:
-#             output = model.run_comprehension(refer_dataset, split='test')
-#
-#         with open('{}_{}_{}_comprehension.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
-#             fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'p@1', 'p@2', 'zero-shot']
-#             writer = DictWriter(fw, fieldnames=fieldnames)
-#
-#             writer.writeheader()
-#             for exp in output:
-#                 writer.writerow(exp)
-#
-#     if args.mode == 'test':
-#         refer_dataset = ReferExpressionDataset(refer, args.dataset, vocab, use_image=True)
-#         print("Start Testing")
-#         generated_exp = model.run_generate(refer_dataset, split='test_unique')
-#
-#         with open('{}_{}_{}_generated.csv'.format(checkpt_file.replace('models', 'output'), args.dataset, model.start_epoch), 'w') as fw:
-#             fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']
-#             writer = DictWriter(fw, fieldnames=fieldnames)
-#
-#             writer.writeheader()
-#             for exp in generated_exp:
-#                 writer.writerow(exp)
-#
-#         #
-#         # for i in range(10, 100):
-#         #     item = refer.getItem(i, split='test_unique', display_image=True)
-#         #     item['PIL'].show()
-#         #     print(generated_exp[i])
-#         #     input('Any key to continue')

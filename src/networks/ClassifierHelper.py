@@ -37,17 +37,13 @@ class Classifier(nn.Module):
         self.total_loss = checkpoint['total_loss']
         self.val_loss = checkpoint['val_loss']
         self.load_state_dict(checkpoint['state_dict'])
-        self.load_params(checkpoint)
 
         print("=> loaded checkpoint '{}' (epoch {})"
               .format(checkpt_file, checkpoint['epoch']))
 
-    def load_params(self, checkpoint):
-        pass
-
     def save_model(self, checkpt_prefix, params):
-        print("=> saving checkpoint '{}'".format(self.checkpt_file(checkpt_prefix)))
-        torch.save(params, self.checkpt_file(checkpt_prefix))
+        print("=> saving '{}'".format(checkpt_prefix))
+        torch.save(params, checkpt_prefix)
 
     @staticmethod
     def checkpt_file(cfg, epoch):
@@ -123,12 +119,12 @@ class Classifier(nn.Module):
                     'val_loss': self.val_loss})
 
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.run_testing(refer_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
+                self.val_loss[-1] = self.compute_average_loss(refer_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
-    def run_testing(self, refer_dataset, split=None, batch_size=4):
+    def compute_average_loss(self, refer_dataset, split=None, batch_size=4):
         self.eval()
         refer_dataset.active_split = split
         dataloader = DataLoader(refer_dataset, batch_size=batch_size)
@@ -143,27 +139,20 @@ class Classifier(nn.Module):
                 total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(k)
 
-    def trim_batch(self, instance):
+    def run_testing(self, refer_dataset, split=None, batch_size=4):
+        self.eval()
+        refer_dataset.active_split = split
+        dataloader = DataLoader(refer_dataset, batch_size=batch_size)
+
+        output = [0]*len(refer_dataset)
+        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
+            output[k] = self.test(instance)
+        return output
+
+    def test(self, instance):
         pass
 
-    def run_generate(self, refer_dataset, split=None):
-        refer_dataset.active_split = split
-        n = len(refer_dataset)
-        dataloader = DataLoader(refer_dataset)
-
-        generated_exp = [0]*len(refer_dataset)
-        for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
-            instances, targets = self.trim_batch(instance)
-            generated_exp[k] = dict()
-            generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
-            generated_exp[k]['refID'] = instance['refID'].item()
-            generated_exp[k]['imgID'] = instance['imageID'].item()
-            generated_exp[k]['objID'] = instance['objectID'][0]
-            generated_exp[k]['objClass'] = instance['objectClass'][0]
-
-        return generated_exp
-
-    def generate(self, start_word, instance=None, feats=None):
+    def trim_batch(self, instance):
         pass
 
     def clear_gradients(self, batch_size=None):
