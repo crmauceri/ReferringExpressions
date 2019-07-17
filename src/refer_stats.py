@@ -2,8 +2,8 @@ from tqdm import tqdm
 import numpy as np
 import argparse
 
-from .data_management.refer import REFER
-from .config import cfg
+from data_management.refer import REFER
+from config import cfg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

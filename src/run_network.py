@@ -3,10 +3,10 @@ from csv import DictWriter
 
 import torch
 
-from .config import cfg
-from .networks.NetworkFactory import networkFactory
-from .data_management.ReferExpressionDataset import ReferExpressionDataset
-from .data_management.refer import REFER
+from config import cfg
+from networks.NetworkFactory import networkFactory
+from data_management.ReferExpressionDataset import ReferExpressionDataset
+from data_management.refer import REFER
 
 if __name__ == "__main__":
 

@@ -3,8 +3,8 @@ from csv import DictReader
 
 from nlg_eval import NLGEval
 
-from .data_management.refer import REFER
-from .config import cfg
+from data_management.refer import REFER
+from config import cfg
 
 
 if __name__ == "__main__":
