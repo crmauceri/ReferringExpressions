@@ -13,3 +13,7 @@ IMG_PROCESSING:
 
 OUTPUT:
   CHECKPOINT_PREFIX: depth_image_classifier
+
+TRAINING:
+  N_EPOCH: 100
+  DROPOUT: 0.5

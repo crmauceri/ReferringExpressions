@@ -12,7 +12,7 @@ IMG_PROCESSING:
   USE_DEPTH: True
 
 OUTPUT:
-  CHECKPOINT_PREFIX: depth_image_classifier
+  CHECKPOINT_PREFIX: mscoco_depth_classification_l2_10e-2
 
 TRAINING:
   L2_FRACTION: 5e-4
