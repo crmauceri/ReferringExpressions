@@ -2,6 +2,7 @@ MODEL:
   ARCHITECTURE: DepthVGGorAlex
 
 DATASET:
+  CLASS: ImageDataset
   NAME: coco
   VERSION: boulder
   DATA_ROOT: datasets/coco/annotations/

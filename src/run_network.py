@@ -5,6 +5,7 @@ import torch
 
 from config import cfg
 from networks.NetworkFactory import networkFactory
+from data_management.DatasetFactory import datasetFactory
 from data_management.ReferExpressionDataset import ReferExpressionDataset
 from data_management.refer import REFER
 
@@ -23,20 +24,19 @@ if __name__ == "__main__":
     cfg.merge_from_file(args.config_file)
     cfg.freeze()
 
-    refer = REFER(cfg)
-    refer_dataset = ReferExpressionDataset(refer, cfg)
+    dataset = datasetFactory(cfg)
 
     model = networkFactory(cfg) #Loads network from checkpoint if exists
 
     if args.mode == 'train':
         print("Start Training")
-        total_loss = model.run_training(refer_dataset, cfg)
+        total_loss = model.run_training(dataset, cfg)
     if args.mode == 'comprehend':
         print("Start Comprehension")
         if args.dataset=='refcocog':
-            output = model.run_comprehension(refer_dataset, split='val')
+            output = model.run_comprehension(dataset, split='val')
         else:
-            output = model.run_comprehension(refer_dataset, split='test')
+            output = model.run_comprehension(dataset, split='test')
 
         with open(model.comprehension_output_file(cfg), 'w') as fw:
             fieldnames = ['gt_sentence', 'refID', 'imgID', 'objID', 'objClass', 'p@1', 'p@2', 'zero-shot']
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     if args.mode == 'test':
         print("Start Testing")
-        generated_exp = model.run_generate(refer_dataset, split='test_unique')
+        generated_exp = model.run_generate(dataset, split='test_unique')
 
         with open(model.generated_output_file(cfg), 'w') as fw:
             fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']
