@@ -8,7 +8,7 @@ import numpy as np
 
 # Helper class to load images
 class ImageProcessing:
-    def __init__(self, cfg): #img_dir, depth_dir, data_dir,
+    def __init__(self, cfg, img_root=None, depth_root=None, data_root=None): #img_dir, depth_dir, data_dir,
                  #disable_cuda=False, transform_size=224,
                  #image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
                  #depth_mean=19018.9, depth_std=18798.8, use_depth=False):
@@ -24,6 +24,13 @@ class ImageProcessing:
         self.IMAGE_DIR = cfg.DATASET.IMG_ROOT
         self.DEPTH_DIR = cfg.DATASET.DEPTH_ROOT
         self.DATA_DIR = cfg.DATASET.DATA_ROOT
+
+        if img_root is not None:
+            self.IMAGE_DIR = img_root
+        if depth_root is not None:
+            self.DEPTH_DIR = depth_root
+        if data_root is not None:
+            self.DATA_DIR = data_root
 
         # load filepaths from data_root/depth.json
         if self.DEPTH_DIR is not None:
@@ -131,10 +138,7 @@ class ImageProcessing:
 
 #Class to load image datasets with coco style annotations
 class ImageDataset(Dataset):
-    def __init__(self, coco, cfg): #coco, img_dir, depth_dir, data_dir,
-                 #disable_cuda=False, transform_size=224,
-                 #image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
-                 #depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
+    def __init__(self, cfg, coco, img_root=None, depth_root=None, data_root=None):
 
         if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
@@ -147,7 +151,7 @@ class ImageDataset(Dataset):
         self.coco_index = [img_id for img_id in self.coco.imgs if len(self.coco.imgToAnns[img_id])>0]
         self.n_classes = cfg.IMG_NET.N_LABELS
 
-        self.image_process = ImageProcessing(cfg)
+        self.image_process = ImageProcessing(cfg, img_root, depth_root, data_root)
 
     def __len__(self):
         return self.length(self.active_split)
@@ -177,7 +181,7 @@ class ImageDataset(Dataset):
 #Class to load referring expressions datasets
 class ReferExpressionDataset(Dataset):
 
-    def __init__(self, refer, cfg): #depth_dir, vocab, disable_cuda=False, transform_size=224,
+    def __init__(self, cfg, refer, img_root=None, depth_root=None, data_root=None): #depth_dir, vocab, disable_cuda=False, transform_size=224,
                 # image_mean=[0.485, 0.456, 0.406], image_std=[0.229, 0.224, 0.225], use_image=False,
                 # depth_mean=19018.9, depth_std=18798.8, use_depth=False, n_contrast_object=0):
 
@@ -188,7 +192,7 @@ class ReferExpressionDataset(Dataset):
         else:
             self.device = torch.device('cpu')
 
-        self.image_process = ImageProcessing(cfg)
+        self.image_process = ImageProcessing(cfg, img_root, depth_root, data_root)
         self.refer = refer
         self.n_contrast_object = cfg.TRAINING.N_CONSTRAST_OBJECT
 

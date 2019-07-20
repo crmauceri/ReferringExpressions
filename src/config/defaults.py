@@ -17,6 +17,7 @@ _C.DATASET.CLASS = "ReferingExpressionDataset"
 _C.DATASET.NAME = "sunspot"
 _C.DATASET.VERSION = "boulder"
 _C.DATASET.IMG_ROOT = 'datasets/SUNRGBD/images' # path to the image directory
+_C.DATASET.IMG_VAL_ROOT = 'datasets/SUNRGBD/images' # path to the image directory
 _C.DATASET.DEPTH_ROOT = 'datasets/SUNRGBD/images' # path to the depth directory
 _C.DATASET.DATA_ROOT = 'datasets/sunspot/annotations/' # path to data directory
 _C.DATASET.VOCAB = 'datasets/vocab_file.txt' # path to vocab file
