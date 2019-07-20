@@ -112,14 +112,13 @@ class DepthVGGorAlex(TruncatedVGGorAlex):
 class MultiplePredictionLoss(nn.Module):
     def __init__(self, cfg, loss_function):
         super(MultiplePredictionLoss, self).__init__()
-        self.loss = loss_function
 
         if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
-            self.loss.cuda()
+            self.loss = loss_function.cuda()
         else:
             self.device = torch.device('cpu')
-            self.loss.cpu()
+            self.loss = loss_function.cpu()
 
     def forward(self, embeddings, targets, per_instance=False):
         # Targets is an n-hot representing multiple correct class labels
