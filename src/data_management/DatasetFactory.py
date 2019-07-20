@@ -10,7 +10,9 @@ def datasetFactory(cfg):
         from pycocotools.coco import COCO
         from .ReferExpressionDataset import ImageDataset
         import os
-        coco_data = COCO(os.path.join(cfg.DATASET.DATA_ROOT, 'instances_train2014_minus_refcocog.json'))
-        return ImageDataset(coco_data, cfg)
+        train = COCO(os.path.join(cfg.DATASET.DATA_ROOT, 'instances_train2014_minus_refcocog.json'))
+        test = COCO(os.path.join(cfg.DATASET.DATA_ROOT, 'instances_valminusminival2014.json'))
+        val = COCO(os.path.join(cfg.DATASET.DATA_ROOT, 'instances_minival2014.json'))
+        return ImageDataset(train, cfg), ImageDataset(test, cfg), ImageDataset(val, cfg)
     else:
         raise ValueError("Dataset class not implemented")

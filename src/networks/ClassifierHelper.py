@@ -66,16 +66,25 @@ class Classifier(nn.Module):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
                                lr=cfg.TRAINING.LEARNING_RATE, weight_decay=cfg.TRAINING.L2_FRACTION)
 
-        refer_dataset.active_split = 'train'
+        if isinstance(refer_dataset, tuple):
+            train_dataset = refer_dataset[0]
+            test_dataset = refer_dataset[1]
+            val_dataset = refer_dataset[2]
+        else:
+            train_dataset = refer_dataset
+            test_dataset = refer_dataset
+            val_dataset = refer_dataset
+
+        train_dataset.active_split = 'train'
 
         if self.use_cuda:
-            dataloader = DataLoader(refer_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True)
+            dataloader = DataLoader(train_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True)
         else:
-            dataloader = DataLoader(refer_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True, num_workers=4)
+            dataloader = DataLoader(train_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True, num_workers=4)
 
         for epoch in range(self.start_epoch, cfg.TRAINING.N_EPOCH):
             self.train()
-            refer_dataset.active_split = 'train'
+            train_dataset.active_split = 'train'
             self.total_loss.append(0)
 
             for i_batch, sample_batched in enumerate(tqdm(dataloader, desc='{}rd epoch'.format(epoch))):
@@ -119,7 +128,7 @@ class Classifier(nn.Module):
                     'val_loss': self.val_loss})
 
                 self.val_loss.append(0)
-                self.val_loss[-1] = self.compute_average_loss(refer_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
+                self.val_loss[-1] = self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
                 print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
