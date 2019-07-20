@@ -12,4 +12,3 @@ IMG_PROCESSING:
 
 OUTPUT:
   CHECKPOINT_PREFIX: maoetal_baseline_batch64_hidden1024_feats2005_dropout0.0_l21.0e-05
-

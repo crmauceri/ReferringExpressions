@@ -1,6 +1,9 @@
 MODEL:
   ARCHITECTURE: DepthVGGorAlex
 
+IMG_NET:
+  FIX_WEIGHTS: []
+
 DATASET:
   CLASS: ImageDataset
   NAME: coco

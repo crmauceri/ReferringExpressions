@@ -41,7 +41,7 @@ _C.LSTM.EMBED = 1024 # Size of LSTM embedding if there is an LSTM in the network
 
 _C.IMG_NET = CN()
 _C.IMG_NET.FEATS = 2005
-_C.IMG_NET.MAXPOOL = False
+# _C.IMG_NET.MAXPOOL = False
 _C.IMG_NET.IGNORE_CLASSIFICATION = False
 _C.IMG_NET.FIX_WEIGHTS = list(range(40))
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"

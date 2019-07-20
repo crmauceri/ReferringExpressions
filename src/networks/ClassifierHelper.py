@@ -15,15 +15,14 @@ class Classifier(nn.Module):
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
+        self.loss_function = loss_function
 
         if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
-            self.loss_function = loss_function.cuda()
             self.use_cuda = True
             print("Using cuda")
         else:
             self.device = torch.device('cpu')
-            self.loss_function = loss_function.cpu()
             self.use_cuda = False
             print("Using cpu")
 

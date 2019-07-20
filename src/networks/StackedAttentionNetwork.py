@@ -6,7 +6,7 @@ import torch.nn as nn
 #torch.manual_seed(1)
 
 from .AttentionModule import AttentionModule
-from .TruncatedImageNetworks import TruncatedVGGorAlex
+from .TruncatedImageNetworks import VGGorAlex
 from .LSTM import LanguageModel
 from .ClassifierHelper import Classifier, SequenceLoss
 
@@ -25,7 +25,7 @@ class SAN(Classifier):
         self.wordnet = LanguageModel(cfg)
 
         #Image Embedding Network
-        self.imagenet = TruncatedVGGorAlex(cfg, models.vgg16(pretrained=True))
+        self.imagenet = VGGorAlex(cfg, models.vgg16(pretrained=True))
 
         #Attention Module to merge text and image
         self.attend1 = AttentionModule(cfg)

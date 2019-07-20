@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
-from .TruncatedImageNetworks import TruncatedVGGorAlex
+from .TruncatedImageNetworks import VGGorAlex
 from .LSTM import LanguageModel
 from .ClassifierHelper import Classifier, SequenceLoss
 from torch.utils.data import DataLoader
@@ -25,7 +25,7 @@ class LanguagePlusImage(Classifier):
         self.wordnet = LanguageModel(cfg)
 
         #Image Embedding Network
-        self.imagenet = TruncatedVGGorAlex(cfg, models.vgg16(pretrained=True))
+        self.imagenet = VGGorAlex(cfg, models.vgg16(pretrained=True), loss_function=None)
 
         self.to(self.device)
 

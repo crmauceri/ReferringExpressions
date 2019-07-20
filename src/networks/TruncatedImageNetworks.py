@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from .ClassifierHelper import Classifier
-from sklearn.metrics import precision_score, recall_score, hamming_loss
+from sklearn.metrics import hamming_loss
 
 
 class ImageClassifier(Classifier):
@@ -57,38 +57,28 @@ class TruncatedResNet(ImageClassifier):
         return x
 
 
-class TruncatedVGGorAlex(ImageClassifier):
-    def __init__(self, cfg, vgg, loss_function): #, maxpool=False, ignore_classification=False, fix_weights=None, checkpoint=None):
-        super(TruncatedVGGorAlex, self).__init__(cfg, loss_function)
+# VGG and Alexnet have similar enough architectures that the same method can be used to freeze layers
+class VGGorAlex(ImageClassifier):
+    def __init__(self, cfg, vgg, loss_function):
+        super(VGGorAlex, self).__init__(cfg, loss_function)
         self.VGG = vgg
-        self.ignore_classification = cfg.IMG_NET.IGNORE_CLASSIFICATION
 
         #Change output dimention
         if cfg.IMG_NET.N_LABELS != 1000:
             vgg.classifier._modules['6'] = nn.Linear(4096, cfg.IMG_NET.N_LABELS)
 
-        #Remove last pooling layer
-        if not cfg.IMG_NET.MAXPOOL:
-            self.VGG.features = nn.Sequential(*list(vgg.features.children())[:-1])
-            self.output_dim = (512, 14, 14)
-        else:
-            self.output_dim = (512, 7, 7)
-
-        if cfg.IMG_NET.FIX_WEIGHTS is not None:
+        if len(cfg.IMG_NET.FIX_WEIGHTS) > 0:
             self.freeze(cfg.IMG_NET.FIX_WEIGHTS)
 
         self.to(self.device)
 
-     # Forward pass ignores classification layers
     def forward(self, x):
         if self.use_cuda:
             x = x.cuda()
 
-        if self.ignore_classification:
-            return self.VGG.features(x)
-        else:
-            return self.VGG(x)
+        return self.VGG(x)
 
+    # Remove gradients from network layers to freeze pretrained network
     def freeze(self, fix_weights):
         child_counter = 0
         for child in self.VGG.modules():
@@ -101,35 +91,11 @@ class TruncatedVGGorAlex(ImageClassifier):
             child_counter += 1
 
 
-class DepthVGGorAlex(TruncatedVGGorAlex):
+class DepthVGGorAlex(VGGorAlex):
     def __init__(self, cfg, vgg, loss_function):
         super(DepthVGGorAlex, self).__init__(cfg, vgg, loss_function)
 
+        # Add a channel to the first layer of convolution to process RGB-D
         depth_input_layer = nn.Conv2d(4, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
         self.VGG.features = nn.Sequential(depth_input_layer, *list(self.VGG.features.children())[1:])
         self.to(self.device)
-
-# DEPRECIATED: Use BCEWithLogitsLoss instead
-class MultiplePredictionLoss(nn.Module):
-    def __init__(self, cfg, loss_function):
-        super(MultiplePredictionLoss, self).__init__()
-
-        if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
-            self.device = torch.device('cuda')
-            self.loss = loss_function.cuda()
-        else:
-            self.device = torch.device('cpu')
-            self.loss = loss_function.cpu()
-
-    def forward(self, embeddings, targets, per_instance=False):
-        # Targets is an n-hot representing multiple correct class labels
-        # Randomly select a target
-        target_index = torch.tensor([np.random.choice(r.cpu().nonzero()[0]) for r in targets], device=self.device)
-
-        # Mask other targets to prevent gradient propegation
-        mask = targets.clone().detach()
-        mask[:, target_index] = 0
-        embeddings[mask==1] = 0
-
-        loss = self.loss(embeddings, target_index)
-        return loss
