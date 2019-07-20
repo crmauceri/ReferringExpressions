@@ -43,9 +43,12 @@ _C.IMG_NET.FEATS = 2005
 _C.IMG_NET.MAXPOOL = False
 _C.IMG_NET.IGNORE_CLASSIFICATION = False
 _C.IMG_NET.FIX_WEIGHTS = list(range(40))
+_C.IMG_NET.LOSS = "BCEWithLogitsLoss"
+_C.IMG_NET.N_LABELS = 80 # Number of classes in mscoco
 
 _C.TRAINING = CN()
 _C.TRAINING.N_EPOCH = 60
+_C.TRAINING.VALIDATION_FREQ = 5
 _C.TRAINING.DROPOUT = 0.0 # Dropout probability
 _C.TRAINING.L2_FRACTION = 1e-5 # L2 Regularization Fraction
 _C.TRAINING.LEARNING_RATE = 0.001 # Adam Optimizer Learning Rate

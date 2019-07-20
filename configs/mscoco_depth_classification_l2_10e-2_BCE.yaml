@@ -1,10 +1,6 @@
 MODEL:
   ARCHITECTURE: DepthVGGorAlex
 
-IMG_NET:
-  LOSS: MultiplePredictionLoss
-  N_LABELS: 1000
-
 DATASET:
   CLASS: ImageDataset
   NAME: coco
@@ -17,7 +13,7 @@ IMG_PROCESSING:
   USE_DEPTH: True
 
 OUTPUT:
-  CHECKPOINT_PREFIX: mscoco_depth_classification_l2_10e-2
+  CHECKPOINT_PREFIX: mscoco_depth_classification_l2_10e-2_BCE
 
 TRAINING:
   L2_FRACTION: 5e-4

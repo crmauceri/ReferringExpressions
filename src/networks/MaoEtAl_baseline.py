@@ -135,3 +135,6 @@ class LanguagePlusImage(Classifier):
         instances = {}
         label_scores = self.forward(instances)
         sum(label_scores(target))
+
+    def test(self, instance, targets):
+        return self.generate(instance=instance)

@@ -1,5 +1,5 @@
 from tqdm import *
-
+from collections import defaultdict
 import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -82,9 +82,8 @@ class Classifier(nn.Module):
                 instances, targets = self.trim_batch(sample_batched)
                 self.clear_gradients(batch_size=targets.size()[0])
 
-                loss = 0
                 label_scores = self(instances)
-                loss += self.loss_function(label_scores, targets)
+                loss = self.loss_function(label_scores, targets)
 
                 if DEBUG:
                     print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
@@ -111,7 +110,7 @@ class Classifier(nn.Module):
 
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
-            if epoch % 2 == 0:
+            if epoch % cfg.TRAINING.VALIDATION_FREQ == 0:
                 self.save_model(Classifier.checkpt_file(cfg, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
@@ -139,17 +138,23 @@ class Classifier(nn.Module):
                 total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(k)
 
-    def run_testing(self, refer_dataset, split=None, batch_size=4):
+    def run_test(self, refer_dataset, split=None, batch_size=4):
         self.eval()
         refer_dataset.active_split = split
         dataloader = DataLoader(refer_dataset, batch_size=batch_size)
 
-        output = [0]*len(refer_dataset)
-        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
-            output[k] = self.test(instance)
+        output = defaultdict(list)
+        for k, batch in enumerate(tqdm(dataloader, desc='Test')):
+            instances, targets = self.trim_batch(batch)
+            result = self.test(instances, targets)
+            for key,value in result.items():
+                if isinstance(value, list):
+                    output[key].extend(value)
+                else:
+                    output[key].append(value)
         return output
 
-    def test(self, instance):
+    def test(self, instance, targets):
         pass
 
     def trim_batch(self, instance):

@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     if args.mode == 'test':
         print("Start Testing")
-        generated_exp = model.run_generate(dataset, split='test_unique')
+        generated_exp = model.run_test(dataset, split='test_unique')
 
         with open(model.generated_output_file(cfg), 'w') as fw:
             fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']

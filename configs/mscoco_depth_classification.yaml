@@ -1,6 +1,10 @@
 MODEL:
   ARCHITECTURE: DepthVGGorAlex
 
+IMG_NET:
+  LOSS: MultiplePredictionLoss
+  N_LABELS: 1000
+
 DATASET:
   CLASS: ImageDataset
   NAME: coco

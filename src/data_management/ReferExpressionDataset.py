@@ -145,6 +145,7 @@ class ImageDataset(Dataset):
         self.coco = coco
         #Filter out images without object annotations
         self.coco_index = [img_id for img_id in self.coco.imgs if len(self.coco.imgToAnns[img_id])>0]
+        self.n_classes = cfg.IMG_NET.N_LABELS
 
         self.image_process = ImageProcessing(cfg)
 
@@ -164,7 +165,7 @@ class ImageDataset(Dataset):
         sample['objectIDs'] = self.coco.getAnnIds(imgIds=sample['imageID'])
 
         sample['objectClass'] = [self.coco.anns[id]['category_id'] for id in sample['objectIDs']]
-        sample['class_tensor'] = torch.tensor([1 if idx in sample['objectClass'] else 0 for idx in range(1000)], dtype=torch.long, device=self.device)
+        sample['class_tensor'] = torch.tensor([1 if idx in sample['objectClass'] else 0 for idx in range(self.n_classes)], dtype=torch.long, device=self.device)
 
         if self.image_process.use_image:
             file_name = self.coco.imgs[sample['imageID']]['file_name']

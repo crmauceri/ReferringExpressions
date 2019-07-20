@@ -1,7 +1,6 @@
-from tqdm import tqdm
 import numpy as np
-import argparse
-
+import argparse, csv
+from collections import defaultdict
 from data_management.refer import REFER
 from config import cfg
 
@@ -19,20 +18,31 @@ if __name__ == "__main__":
     with open('locative_prep.txt', 'r') as f:
         locationPrep = list(set([l.strip() for l in f.readlines() if not l.startswith("#")]))
 
-    locationPrep = [l for l in locationPrep if len(l)>0]
-    loc_index = dict(zip(locationPrep, range(len(locationPrep))))
-    locCount1 = [0] * len(locationPrep)
+    locationPrep = [" {} ".format(l) for l in locationPrep if len(l)>0]
+    locationPrep.sort(key=lambda item: (-len(item), item)) #Longest to shortest
 
+    locCount1 = defaultdict(int)
 
     words = 0.0
-    for idx, sent in tqdm(refer.Sents.items()):
+    sentences = []
+    for idx, sent in refer.Sents.items():
         words += len(sent['tokens'])
-        for l in locationPrep:
-            if l in sent['tokens']:
-                locCount1[loc_index[l]] += 1
+        sentences.append(" " + sent['sent'] + " ")
 
+
+    for l in locationPrep:
+        for i, sent in enumerate(sentences):
+            if l in sent:
+                locCount1[l] += 1
+                sentences[i] = sent.replace(l, '')
     print("Average words:{}".format(words/len(refer.Sents)))
-    print("Average preps/sent{}".format(np.sum(np.array(locCount1))/len(refer.Sents)))
+    total = np.sum(np.array(list(locCount1.values())))
+    print("Total preps:{}".format(total))
+    print("Average preps/sent{}".format(total/len(refer.Sents)))
 
-    sorted_idx = np.argsort(np.array(locCount1))
-    print("Most frequent spatial preps:{}".format(" ".join([locationPrep[ii] for ii in sorted_idx[-1:-10:-1]])))
+    with open('{}_loc_freq.csv'.format(cfg.DATASET.NAME), 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile, delimiter=' ',
+                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for key, value in locCount1.items():
+            spamwriter.writerow([key, value])
+
