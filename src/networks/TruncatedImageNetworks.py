@@ -10,7 +10,8 @@ class ImageClassifier(Classifier):
         super(ImageClassifier, self).__init__(cfg, loss_function)
 
     def trim_batch(self, instance):
-        return instance['image'], torch.as_tensor(instance['class_tensor'], dtype=torch.float32)
+        return instance['image'], torch.as_tensor(instance['class_tensor'],
+                                                  dtype=torch.float32, device=self.device)
 
     # Makes a dictionary of all the objects in an image and the classifier's confidence on them
     def test(self, instance, targets):
