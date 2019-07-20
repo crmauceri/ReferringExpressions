@@ -116,8 +116,10 @@ class MultiplePredictionLoss(nn.Module):
 
         if not cfg.MODEL.DISABLE_CUDA and torch.cuda.is_available():
             self.device = torch.device('cuda')
+            self.loss.cuda()
         else:
             self.device = torch.device('cpu')
+            self.loss.cpu()
 
     def forward(self, embeddings, targets, per_instance=False):
         # Targets is an n-hot representing multiple correct class labels
