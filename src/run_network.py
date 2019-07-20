@@ -15,6 +15,12 @@ if __name__ == "__main__":
     parser.add_argument('config_file', help='config file path')
     parser.add_argument('mode', help='train/test/comprehend')
     parser.add_argument('--DEBUG', type=bool, default=False, help="Sets random seed to fixed value")
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )
 
     args = parser.parse_args()
 
@@ -22,6 +28,7 @@ if __name__ == "__main__":
         torch.manual_seed(1)
 
     cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
     cfg.freeze()
 
     dataset = datasetFactory(cfg)
