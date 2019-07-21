@@ -64,77 +64,66 @@ class LanguagePlusImage(Classifier):
         super(LanguagePlusImage, self).clear_gradients()
         self.wordnet.clear_gradients(batch_size)
 
-    def run_generate(self, refer_dataset, split=None):
-        refer_dataset.active_split = split
-        n = len(refer_dataset)
-        dataloader = DataLoader(refer_dataset)
+    # def run_generate(self, refer_dataset, split=None):
+    #     refer_dataset.active_split = split
+    #     n = len(refer_dataset)
+    #     dataloader = DataLoader(refer_dataset)
+    #
+    #     generated_exp = [0]*len(refer_dataset)
+    #     for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
+    #         instances, targets = self.trim_batch(instance)
+    #         generated_exp[k] = dict()
+    #         generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
+    #         generated_exp[k]['refID'] = instance['refID'].item()
+    #         generated_exp[k]['imgID'] = instance['imageID'].item()
+    #         generated_exp[k]['objID'] = instance['objectID'][0]
+    #         generated_exp[k]['objClass'] = instance['objectClass'][0]
+    #
+    #     return generated_exp
 
-        generated_exp = [0]*len(refer_dataset)
-        for k, instance in enumerate(tqdm(dataloader, desc='Generation')):
-            instances, targets = self.trim_batch(instance)
-            generated_exp[k] = dict()
-            generated_exp[k]['generated_sentence'] = ' '.join(self.generate("<bos>", instance=instances))
-            generated_exp[k]['refID'] = instance['refID'].item()
-            generated_exp[k]['imgID'] = instance['imageID'].item()
-            generated_exp[k]['objID'] = instance['objectID'][0]
-            generated_exp[k]['objClass'] = instance['objectClass'][0]
-
-        return generated_exp
-
-    def generate(self, start_word, instance=None, feats=None):
+    def generate(self, instance=None, feats=None):
         with torch.no_grad():
             if feats is None:
                 feats = self.image_forward(instance)
-            return self.wordnet.generate(start_word, feats=feats)
+            return self.wordnet.generate('<bos>', feats=feats)
 
-    def run_comprehension(self, refer_dataset, split=None, parameters=None):
-        loss_fcn = SequenceLoss(nn.CrossEntropyLoss(reduce=False))
-        self.eval()
-        refer_dataset.active_split = split
-        dataloader = DataLoader(refer_dataset, batch_size=1)
+    def comprehension(self, instances):
+        with torch.no_grad():
+            # Make new instances out of all the contrast objects
+            for object in instances['contrast']:
+                for key, value in object.items():
+                    instances[key] = torch.cat([instances[key], value], 0)
+            del instances['contrast']
+            n_objects = instances['object'].size()[0]
+            instances, targets = self.trim_batch(instances)
+            self.clear_gradients(batch_size=n_objects)
 
-        correct = 0.0
-        p2 = 0.0
-        average_objects = 0.0
-        output = [0]*len(refer_dataset)
-        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
-            with torch.no_grad():
-                for object in instance['contrast']:
-                    for key, value in object.items():
-                        instance[key] = torch.cat([instance[key], value], 0)
-                del instance['contrast']
-                instances, targets = self.trim_batch(instance)
-                self.clear_gradients(batch_size=instances['object'].size()[0])
+            output = dict()
+            label_scores = self(instances)
+            loss = self.loss_function(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
 
-                output[k] = dict()
-                label_scores = self(instances, parameters)
-                loss = loss_fcn(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
-                average_objects += loss.size()[0]
-                sorted_loss = np.argsort(loss)
-                if sorted_loss[0] == 0:
-                    correct += 1.0
-                    output[k]['p@1'] = 1
-                if sorted_loss[0] == 0 or sorted_loss[1] == 0:
-                    p2 += 1.0
-                    output[k]['p@2'] = 1
+            sorted_loss = np.argsort(loss)
+            if sorted_loss[0] == 0:
+                output['p@1'] = 1
+            else:
+                output['p@1'] = 0
+            if sorted_loss[0] == 0 or sorted_loss[1] == 0:
+                output['p@2'] = 1
+            else:
+                output['p@2'] = 0
 
-                output[k]['gt_sentence'] = ' '.join([t[0] for t in instance['tokens']])
-                output[k]['refID'] = instance['refID'].item()
-                output[k]['imgID'] = instance['imageID'].item()
-                output[k]['objID'] = instance['objectID'][0]
-                output[k]['objClass'] = instance['objectClass'][0]
-                output[k]['zero-shot'] = instance['zero-shot']
+            output['n_objects'] = n_objects
 
-        print("P@1 {}".format(correct/float(k)))
-        print("P@2 {}".format(p2 / float(k)))
-        print("Average objects compared to {}".format(average_objects / float(k)))
-
-        return output
-
-    def comprehension(self, instance, bboxes, target):
-        instances = {}
-        label_scores = self.forward(instances)
-        sum(label_scores(target))
+            return output
 
     def test(self, instance, targets):
-        return self.generate(instance=instance)
+        output = dict()
+        output['refID'] = instance['refID'].item()
+        output['imgID'] = instance['imageID'].item()
+        output['objID'] = instance['objectID'][0].item()
+        output['objClass'] = instance['objectClass'][0].item()
+        output['gt_sentence'] = " ".join([t[0] for t in instance['tokens']])
+
+        output['gen_sentence'] = " ".join(self.generate(instance=instance))
+        output.update(self.comprehension(instance))
+        return output

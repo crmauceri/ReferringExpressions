@@ -45,7 +45,7 @@ _C.IMG_NET.FEATS = 2005
 _C.IMG_NET.IGNORE_CLASSIFICATION = False
 _C.IMG_NET.FIX_WEIGHTS = list(range(40))
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"
-_C.IMG_NET.N_LABELS = 80 # Number of classes in mscoco
+_C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
 
 _C.TRAINING = CN()
 _C.TRAINING.N_EPOCH = 60

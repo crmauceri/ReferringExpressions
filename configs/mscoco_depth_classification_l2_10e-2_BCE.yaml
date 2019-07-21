@@ -3,6 +3,7 @@ MODEL:
 
 IMG_NET:
   FIX_WEIGHTS: []
+  N_LABELS: 80
 
 DATASET:
   CLASS: ImageDataset

@@ -1,4 +1,4 @@
-import os, random, json
+import os, random, json, math
 from PIL import ImageDraw, Image
 import torch
 from torch.utils.data import Dataset
@@ -208,9 +208,21 @@ class ReferExpressionDataset(Dataset):
         self.sent2vocab(self.word2idx)
 
         self.index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']]
-        self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'train']
-        self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
-        self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'test']
+        self.train_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']
+                              if self.refer.Refs[ref]['split'] == 'train']
+
+    # Refcocog does not provide a seperate test set. So we split the val set in half.
+        if cfg.DATASET.NAME == 'refcocog':
+            val_labels =  self.val_index = [sent_id for ref in self.refer.Refs for sent_id in
+                              self.refer.Refs[ref]['sent_ids'] if self.refer.Refs[ref]['split'] == 'val']
+            n_val_labels = len(val_labels)
+            self.val_index = val_labels[1:math.floor(n_val_labels/2)]
+            self.test_index = val_labels[math.floor(n_val_labels/2):]
+        else:
+            self.val_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']
+                              if self.refer.Refs[ref]['split'] == 'val']
+            self.test_index = [sent_id for ref in self.refer.Refs for sent_id in self.refer.Refs[ref]['sent_ids']
+                              if self.refer.Refs[ref]['split'] == 'test']
 
     def __len__(self):
         return self.length(self.active_split)
@@ -292,7 +304,6 @@ class ReferExpressionDataset(Dataset):
             return rgb_object, pos
 
     def getAllImageFeatures(self, sent_idx, display_image=False):
-
         ref = self.refer.sentToRef[sent_idx]
 
         # Load the image
@@ -305,15 +316,8 @@ class ReferExpressionDataset(Dataset):
 
         # Extract crops of contrast objects
         if self.n_contrast_object > 0:
-            annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
-            bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if
-                      id != ref['ann_id'] and int(self.refer.Anns[id]['bbox'][2]) > 0 and int(
-                          self.refer.Anns[id]['bbox'][3]) > 0]
-            bboxes = random.sample(bboxes, min(self.n_contrast_object, len(bboxes)))
-            sample['contrast'] = []
-            for bbox in bboxes:
-                object, pos = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox)
-                sample['contrast'].append({'object': object, 'pos': pos})
+            sample['contrast'] = self.getContrastObjects(sent_idx, n_contrast_object=self.n_contrast_object,
+                                                         raw_image=raw_image, raw_depth=raw_depth)
 
         if display_image:
             bbox = [bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]]
@@ -323,6 +327,28 @@ class ReferExpressionDataset(Dataset):
 
         return sample, raw_image, raw_depth
 
+    def getContrastObjects(self, sent_idx, n_contrast_object=float('inf'), raw_image=None, raw_depth=None):
+        ref = self.refer.sentToRef[sent_idx]
+
+        if raw_image is None:
+            # Load the image
+            file_name = self.refer.Imgs[ref['image_id']]['file_name']
+            sample, raw_image, raw_depth = self.image_process.getAllImageFeatures(ref['image_id'], file_name)
+
+        # Randomly sample all bounding boxes
+        annIds = self.refer.getAnnIds(image_ids=ref['image_id'])
+        bboxes = [self.refer.Anns[id]['bbox'] for id in annIds if
+                  id != ref['ann_id'] and int(self.refer.Anns[id]['bbox'][2]) > 0 and int(
+                      self.refer.Anns[id]['bbox'][3]) > 0]
+        bboxes = random.sample(bboxes, min(n_contrast_object, len(bboxes)))
+
+        # Get the image crops for the selected bounding boxes
+        contrast = []
+        for bbox in bboxes:
+            object, pos = self.getObject(image=raw_image, depth=raw_depth, bbox=bbox)
+            contrast.append({'object': object, 'pos': pos})
+
+        return contrast
 
 # TODO rewrite with config file
 # Test data loader

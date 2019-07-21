@@ -24,6 +24,7 @@ to avoid messing up other installations.
     - Cython
     - tqdm
     - scikit-image
+    - yacs
     
     ```bash
     conda create --name refexp_generation
@@ -34,6 +35,8 @@ to avoid messing up other installations.
     conda install pytorch torchvision -c pytorch 
     
     conda install Cython tqdm scikit-image
+    pip install yacs
+ 
     ```
 
 2. Install the [cocoapi](https://github.com/cocodataset/cocoapi)

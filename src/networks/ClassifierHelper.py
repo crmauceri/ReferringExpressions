@@ -54,12 +54,8 @@ class Classifier(nn.Module):
         return 'models/{}.mdl'.format(cfg.OUTPUT.CHECKPOINT_PREFIX)
 
     @staticmethod
-    def generated_output_file(cfg):
-        return 'output/{}_{}_generated.csv'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
-
-    @staticmethod
-    def comprehension_output_file(cfg):
-        'output/{}_{}_comprehension.csv'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
+    def test_output_file(cfg):
+        return 'output/{}_{}_test.json'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
 
     def run_training(self, refer_dataset, cfg):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
@@ -120,15 +116,14 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % cfg.TRAINING.VALIDATION_FREQ == 0:
+                self.val_loss.append(self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE))
+                print('Average validation loss:{}'.format(self.val_loss[-1]))
+
                 self.save_model(Classifier.checkpt_file(cfg, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
                     'total_loss': self.total_loss,
                     'val_loss': self.val_loss})
-
-                self.val_loss.append(0)
-                self.val_loss[-1] = self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
-                print('Average validation loss:{}'.format(self.total_loss[epoch]))
 
         return self.total_loss
 
@@ -147,20 +142,21 @@ class Classifier(nn.Module):
                 total_loss += self.loss_function(label_scores, targets)
         return total_loss/float(k)
 
-    def run_test(self, refer_dataset, split=None, batch_size=4):
+    def run_test(self, refer_dataset, split=None):
         self.eval()
         refer_dataset.active_split = split
-        dataloader = DataLoader(refer_dataset, batch_size=batch_size)
 
-        output = defaultdict(list)
+        # This is a hack to make sure that comprehension works in MaoEtAl_baseline regardless of whether contrast objects were used in training
+        if hasattr(refer_dataset, 'n_contrast_object'):
+            refer_dataset.n_contrast_object = float('inf')
+
+        dataloader = DataLoader(refer_dataset, batch_size=1)
+
+        output = list()
         for k, batch in enumerate(tqdm(dataloader, desc='Test')):
             instances, targets = self.trim_batch(batch)
-            result = self.test(instances, targets)
-            for key,value in result.items():
-                if isinstance(value, list):
-                    output[key].extend(value)
-                else:
-                    output[key].append(value)
+            output.append(self.test(instances, targets))
+
         return output
 
     def test(self, instance, targets):

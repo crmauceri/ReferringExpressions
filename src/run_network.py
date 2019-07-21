@@ -1,4 +1,4 @@
-import argparse, os
+import argparse, json
 from csv import DictWriter
 
 import torch
@@ -6,8 +6,6 @@ import torch
 from config import cfg
 from networks.NetworkFactory import networkFactory
 from data_management.DatasetFactory import datasetFactory
-from data_management.ReferExpressionDataset import ReferExpressionDataset
-from data_management.refer import REFER
 
 if __name__ == "__main__":
 
@@ -55,12 +53,19 @@ if __name__ == "__main__":
 
     if args.mode == 'test':
         print("Start Testing")
-        generated_exp = model.run_test(dataset, split='test_unique')
 
-        with open(model.generated_output_file(cfg), 'w') as fw:
-            fieldnames = ['generated_sentence', 'refID', 'imgID', 'objID', 'objClass']
-            writer = DictWriter(fw, fieldnames=fieldnames)
+        if isinstance(dataset, tuple):
+            train_dataset = dataset[0]
+            test_dataset = dataset[1]
+            val_dataset = dataset[2]
+        else:
+            train_dataset = dataset
+            test_dataset = dataset
+            val_dataset = dataset
 
-            writer.writeheader()
-            for exp in generated_exp:
-                writer.writerow(exp)
+        output = model.run_test(test_dataset, split='test')
+
+        with open(model.test_output_file(cfg), 'w') as fw:
+            json.dump(output, fw)
+
+        print("Test output saved : {}".format(model.test_output_file(cfg)))
