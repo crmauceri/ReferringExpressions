@@ -10,6 +10,6 @@ class LanguagePlusDepthImage(LanguagePlusImage):
         super(LanguagePlusDepthImage, self).__init__(cfg)
 
         # Use a Depth Image Embedding Network
-        self.imagenet = DepthVGGorAlex(cfg, models.vgg16(pretrained=False))
+        self.imagenet = DepthVGGorAlex(cfg, models.vgg16(pretrained=False), loss_function=None)
 
         self.to(self.device)
