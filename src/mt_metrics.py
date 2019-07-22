@@ -3,7 +3,6 @@ import json
 
 from nlgeval import NLGEval
 
-from networks.ClassifierHelper import Classifier
 from data_management.refer import REFER
 from config import cfg
 
@@ -13,6 +12,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculates metrics from output of a Generation/Comprehension network.' +
                                                  ' Run `run_network.py <config> test` first.')
     parser.add_argument('config_file', help='config file path')
+    parser.add_argument('results_file', help='results file path')
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -44,7 +44,7 @@ if __name__ == "__main__":
                 references.append([s['sent'] for s in ref['sentences'][1:]])
     else:
         # load generation outputs
-        with open(Classifier.test_output_file(cfg), 'r') as f:
+        with open(args.results_file, 'r') as f:
             genData = json.load(f)
             for row in genData:
                 ref_id = int(row['refID'])

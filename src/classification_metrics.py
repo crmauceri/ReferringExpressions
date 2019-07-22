@@ -2,7 +2,6 @@ import argparse
 import json
 
 from data_management.DatasetFactory import datasetFactory
-from networks.ClassifierHelper import Classifier
 from config import cfg
 import numpy as np
 
