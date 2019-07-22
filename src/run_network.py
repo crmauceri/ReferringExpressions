@@ -9,7 +9,7 @@ from data_management.DatasetFactory import datasetFactory
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Generate referring expression for target object given bounding box and image')
+    parser = argparse.ArgumentParser(description='Train or test a network')
     parser.add_argument('config_file', help='config file path')
     parser.add_argument('mode', help='train/test/comprehend')
     parser.add_argument('--DEBUG', type=bool, default=False, help="Sets random seed to fixed value")
@@ -63,9 +63,23 @@ if __name__ == "__main__":
             test_dataset = dataset
             val_dataset = dataset
 
-        output = model.run_test(test_dataset, split='test')
+        if cfg.TEST.DO_TRAIN:
+            output = model.run_test(train_dataset, split='train')
 
-        with open(model.test_output_file(cfg), 'w') as fw:
-            json.dump(output, fw)
+            with open(model.test_output_file(cfg) + '_train', 'w') as fw:
+                json.dump(output, fw)
+
+        if cfg.TEST.DO_VAL:
+            output = model.run_test(val_dataset, split='val')
+
+            with open(model.test_output_file(cfg) + '_val', 'w') as fw:
+                json.dump(output, fw)
+
+        if cfg.TEST.DO_TEST:
+            output = model.run_test(test_dataset, split='test')
+
+            with open(model.test_output_file(cfg), 'w') as fw:
+                json.dump(output, fw)
+
 
         print("Test output saved : {}".format(model.test_output_file(cfg)))
