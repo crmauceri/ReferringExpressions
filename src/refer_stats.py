@@ -6,7 +6,7 @@ from config import cfg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Generate referring expression for target object given bounding box and image')
+        description='Calculate the number of prepositions in a referring expressions dataset')
     parser.add_argument('config_file', help='config file path')
 
     args = parser.parse_args()

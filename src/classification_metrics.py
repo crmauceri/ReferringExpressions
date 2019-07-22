@@ -8,11 +8,19 @@ import numpy as np
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Generate referring expression for target object given bounding box and image')
+    parser = argparse.ArgumentParser(description='Calculates metrics from output of a Classification network.' +
+                                                 ' Run `run_network.py <config> test` first.')
     parser.add_argument('config_file', help='config file path')
+    parser.add_argument(
+        "opts",
+        help="Modify config options using the command-line",
+        default=None,
+        nargs=argparse.REMAINDER,
+    )
 
     args = parser.parse_args()
     cfg.merge_from_file(args.config_file)
+    cfg.merge_from_list(args.opts)
     cfg.freeze()
 
     refer = datasetFactory(cfg)

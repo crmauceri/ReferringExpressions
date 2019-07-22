@@ -16,7 +16,7 @@ class ImageClassifier(Classifier):
     # Makes a dictionary of all the objects in an image and the classifier's confidence on them
     def test(self, instance, targets):
         with torch.no_grad():
-            prediction = torch.nn.functional.sigmoid(self(instance))
+            prediction = torch.sigmoid(self(instance))
 
         targets = (targets == 1).cpu();
         prediction = (prediction > 0.5).cpu();
