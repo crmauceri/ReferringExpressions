@@ -29,8 +29,10 @@ def networkFactory(cfg):
 
     checkpt_file = model.model_file(cfg)
     if os.path.exists(checkpt_file):
+        print("Loading from checkpoint: {}".format(checkpt_file))
         model.load_model(checkpt_file)
     elif cfg.MODEL.USE_PRETRAINED and os.path.exists(cfg.MODEL.PRETRAINED):
+        print("Loading from pretraining: {}".format(cfg.MODEL.PRETRAINED))
         model.load_model(cfg.MODEL.PRETRAINED)
 
     return model
