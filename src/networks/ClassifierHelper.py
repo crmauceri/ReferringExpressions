@@ -1,5 +1,4 @@
 from tqdm import *
-from collections import defaultdict
 import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn

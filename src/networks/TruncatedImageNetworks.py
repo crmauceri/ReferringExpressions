@@ -80,6 +80,7 @@ class VGGorAlex(ImageClassifier):
 
     # Remove gradients from network layers to freeze pretrained network
     def freeze(self, fix_weights):
+        print("Freeze image network weights")
         child_counter = 0
         for child in self.VGG.modules():
             if child_counter in fix_weights:

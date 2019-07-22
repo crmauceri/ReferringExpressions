@@ -151,6 +151,11 @@ class ImageDataset(Dataset):
         self.coco_index = [img_id for img_id in self.coco.imgs if len(self.coco.imgToAnns[img_id])>0]
         self.n_classes = cfg.IMG_NET.N_LABELS
 
+        #COCO doesn't have contiguous labels. These maps go from coco labels to contiguous indices and back
+        self.coco_cat_map = dict(zip(range(len(self.coco.cats)), self.coco.cats.keys()))
+        self.cat_coco_map = dict(zip(self.coco.cats.keys(), range(len(self.coco.cats))))
+        assert len(self.coco.cats)==self.n_classes
+
         self.image_process = ImageProcessing(cfg, img_root, depth_root, data_root)
 
     def __len__(self):
@@ -168,7 +173,7 @@ class ImageDataset(Dataset):
         sample['imageID'] = self.coco_index[idx]
         sample['objectIDs'] = self.coco.getAnnIds(imgIds=sample['imageID'])
 
-        sample['objectClass'] = [self.coco.anns[id]['category_id'] for id in sample['objectIDs']]
+        sample['objectClass'] = [self.cat_coco_map[self.coco.anns[id]['category_id']] for id in sample['objectIDs']]
         sample['class_tensor'] = torch.tensor([1 if idx in sample['objectClass'] else 0 for idx in range(self.n_classes)], dtype=torch.long, device=self.device)
 
         if self.image_process.use_image:
