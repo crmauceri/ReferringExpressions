@@ -2,7 +2,6 @@ import argparse
 import json
 
 from data_management.DatasetFactory import datasetFactory
-from networks.ClassifierHelper import Classifier
 from config import cfg
 import numpy as np
 
@@ -11,6 +10,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Calculates metrics from output of a Classification network.' +
                                                  ' Run `run_network.py <config> test` first.')
     parser.add_argument('config_file', help='config file path')
+    parser.add_argument('results_file', help='results file path')
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     total = 0.0
 
     # load generation outputs
-    with open(Classifier.test_output_file(cfg), 'r') as f:
+    with open(args.results_file, 'r') as f:
         genData = json.load(f)
         for row in genData:
             total += 1.0
