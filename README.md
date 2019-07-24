@@ -25,6 +25,8 @@ to avoid messing up other installations.
     - tqdm
     - scikit-image
     - yacs
+    - tensorflow (for using tensorboard)
+    - future
     
     ```bash
     conda create --name refexp_generation
@@ -34,9 +36,12 @@ to avoid messing up other installations.
     # The following installs vanilla pytorch without CUDA
     conda install pytorch torchvision -c pytorch 
     
-    conda install Cython tqdm scikit-image
+    conda install Cython tqdm scikit-image future
     pip install yacs
  
+    # Check https://www.tensorflow.org/install for appropriate tensorflow package
+    # The following installs vanilla tensorflow without CUDA
+    pip install tensorflow
     ```
 
 2. Install the [cocoapi](https://github.com/cocodataset/cocoapi)

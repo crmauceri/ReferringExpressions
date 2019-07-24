@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
+import os
 
 #torch.manual_seed(1)
 
@@ -57,6 +59,13 @@ class Classifier(nn.Module):
         return 'output/{}_{}_test.json'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
 
     def run_training(self, refer_dataset, cfg):
+        log_dir = os.path.join("output", cfg.OUTPUT.CHECKPOINT_PREFIX)
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+        writer = SummaryWriter(log_dir=log_dir)
+        # TODO currently throwing error (DepthVGGorAlex object argument after * must be an iterable, not NoneType)
+        # writer.add_graph(self.cpu(), images)
+
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
                                lr=cfg.TRAINING.LEARNING_RATE, weight_decay=cfg.TRAINING.L2_FRACTION)
 
@@ -103,9 +112,11 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.item()
 
-            self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch)
+                break
 
-            self.clear_gradients(batch_size=1)
+            self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch + 1)
+            writer.add_scalar('Average training loss', self.total_loss[epoch], global_step=epoch)
+
             self.save_model(Classifier.model_file(cfg), {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
@@ -115,7 +126,15 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % cfg.TRAINING.VALIDATION_FREQ == 0:
-                self.val_loss.append(self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE))
+                # Log weights and gradients
+                for tag, value in self.named_parameters():
+                    tag = tag.replace('.', '/')
+                    writer.add_histogram(tag, value.data.cpu().numpy(), epoch)
+                    writer.add_histogram(tag + '/grad', value.grad.data.cpu().numpy(), epoch + 1)
+
+                val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
+                writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
+                self.val_loss.append(val_loss)
                 print('Average validation loss:{}'.format(self.val_loss[-1]))
 
                 self.save_model(Classifier.checkpt_file(cfg, epoch), {
@@ -124,6 +143,7 @@ class Classifier(nn.Module):
                     'total_loss': self.total_loss,
                     'val_loss': self.val_loss})
 
+        writer.close()
         return self.total_loss
 
     def compute_average_loss(self, refer_dataset, split=None, batch_size=4):

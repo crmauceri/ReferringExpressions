@@ -12,6 +12,10 @@ _C.MODEL.USE_PRETRAINED = False
 _C.MODEL.PRETRAINED = "" #Set this of the model name of the pretrained model to use
 _C.MODEL.DISABLE_CUDA = False
 
+#--- Output ---#
+_C.OUTPUT = CN()
+_C.OUTPUT.CHECKPOINT_PREFIX = 'defaults'
+
 #--- Dataset ---#
 _C.DATASET = CN()
 _C.DATASET.CLASS = "ReferingExpressionDataset"
@@ -50,6 +54,7 @@ _C.IMG_NET.IGNORE_CLASSIFICATION = False
 _C.IMG_NET.FIX_WEIGHTS = list(range(40))
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"
 _C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
+_C.IMG_NET.LOSS_WEIGHTS = [1.0]*_C.IMG_NET.N_LABELS #
 
 #--- Training hyperparameters ---#
 _C.TRAINING = CN()
@@ -67,7 +72,3 @@ _C.TEST = CN()
 _C.TEST.DO_TRAIN = False
 _C.TEST.DO_VAL = True
 _C.TEST.DO_TEST = False
-
-#--- Output ---#
-_C.OUTPUT = CN()
-_C.OUTPUT.CHECKPOINT_PREFIX = 'defaults'
