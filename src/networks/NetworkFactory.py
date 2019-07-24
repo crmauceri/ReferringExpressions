@@ -15,9 +15,9 @@ def networkFactory(cfg):
         import torchvision.models as models
         import torch.nn as nn
         if cfg.IMG_NET.LOSS=="BCEWithLogitsLoss":
-            loss_function = nn.BCEWithLogitsLoss()
+            loss_function = nn.BCEWithLogitsLoss()#weights=cfg.IMAGE_NET.LOSS_WEIGHTS)
         elif cfg.IMG_NET.LOSS=="CrossEntropyLoss":
-            loss_function = nn.CrossEntropyLoss()
+            loss_function = nn.CrossEntropyLoss()#weights=cfg.IMAGE_NET.LOSS_WEIGHTS)
         else:
             raise ValueError("Not implemented for this loss function")
         model = networks.TruncatedImageNetworks.DepthVGGorAlex(cfg, vgg=models.vgg16(pretrained=False), loss_function=loss_function)

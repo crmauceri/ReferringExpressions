@@ -27,7 +27,7 @@ if __name__ == "__main__":
     plt.title(cfg.OUTPUT.CHECKPOINT_PREFIX)
 
     plt.plot(range(len(model.total_loss)), model.total_loss, label="Training Loss")
-    plt.plot(range(5, len(model.total_loss), cfg.TRAINING.VALIDATION_FREQ), model.val_loss, label="Validation Loss")
+    plt.plot(range(1, len(model.total_loss), cfg.TRAINING.VALIDATION_FREQ), model.val_loss, label="Validation Loss")
 
 
     leg = plt.legend(loc='best')
