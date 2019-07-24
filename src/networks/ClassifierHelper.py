@@ -129,7 +129,7 @@ class Classifier(nn.Module):
                 for tag, value in self.named_parameters():
                     tag = tag.replace('.', '/')
                     writer.add_histogram(tag, value.data.cpu().numpy(), epoch)
-                    writer.add_histogram(tag + '/grad', value.grad.data.cpu().numpy(), epoch + 1)
+                    # writer.add_histogram(tag + '/grad', value.grad.data.cpu().numpy(), epoch + 1)
 
                 val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
                 writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
