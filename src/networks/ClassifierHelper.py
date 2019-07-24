@@ -112,7 +112,6 @@ class Classifier(nn.Module):
 
                 self.total_loss[epoch] += loss.item()
 
-                break
 
             self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch + 1)
             writer.add_scalar('Average training loss', self.total_loss[epoch], global_step=epoch)
