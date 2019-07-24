@@ -10,7 +10,7 @@ def networkFactory(cfg):
     elif cfg.MODEL.ARCHITECTURE=="MaoEtAl_full":
         import networks.MaoEtAl_full
         model = networks.MaoEtAl_full.LanguagePlusImage_Contrast(cfg)
-    elif cfg.MODEL.ARCHITECTURE=="DepthVGGorAlex":
+    elif cfg.MODEL.ARCHITECTURE=="DepthVGGorAlex" or cfg.MODEL.ARCHITECTURE=="VGGorAlex":
         import networks.TruncatedImageNetworks
         import torchvision.models as models
         import torch.nn as nn
@@ -20,7 +20,10 @@ def networkFactory(cfg):
             loss_function = nn.CrossEntropyLoss()#weights=cfg.IMAGE_NET.LOSS_WEIGHTS)
         else:
             raise ValueError("Not implemented for this loss function")
-        model = networks.TruncatedImageNetworks.DepthVGGorAlex(cfg, vgg=models.vgg16(pretrained=False), loss_function=loss_function)
+        if cfg.MODEL.ARCHITECTURE=="DepthVGGorAlex":
+            model = networks.TruncatedImageNetworks.DepthVGGorAlex(cfg, vgg=models.vgg16(pretrained=False), loss_function=loss_function)
+        else:
+            model = networks.TruncatedImageNetworks.VGGorAlex(cfg, vgg=models.vgg16(pretrained=False), loss_function=loss_function)
     elif cfg.MODEL.ARCHITECTURE=="LSTM":
         import networks.LSTM
         model = networks.LSTM.LanguageModel(cfg)

@@ -18,8 +18,8 @@ class ImageClassifier(Classifier):
         with torch.no_grad():
             prediction = torch.sigmoid(self(instance))
 
-        targets = (targets == 1).cpu();
-        prediction = (prediction > 0.5).cpu();
+        targets = (targets == 1).cpu()
+        prediction = (prediction > 0.5).cpu()
         output = dict()
         output['Hamming_Loss'] = hamming_loss(targets, prediction)
         TP = np.logical_and(targets, prediction)
