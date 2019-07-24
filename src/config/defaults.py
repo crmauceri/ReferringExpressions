@@ -48,12 +48,16 @@ _C.LSTM.EMBED = 1024 # Size of LSTM embedding if there is an LSTM in the network
 
 #--- Image feature network Variables ---#
 _C.IMG_NET = CN()
+
+_C.IMG_NET.USE_CUSTOM = False
+_C.IMG_NET.CUSTOM = "" #Set this of the model name of the pretrained model to use
+_C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
+
 _C.IMG_NET.FEATS = 2005
 # _C.IMG_NET.MAXPOOL = False
 _C.IMG_NET.IGNORE_CLASSIFICATION = False
 _C.IMG_NET.FIX_WEIGHTS = list(range(40))
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"
-_C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
 _C.IMG_NET.LOSS_WEIGHTS = [1.0]*_C.IMG_NET.N_LABELS #
 
 #--- Training hyperparameters ---#

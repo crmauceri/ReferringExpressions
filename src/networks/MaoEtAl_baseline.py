@@ -25,7 +25,13 @@ class LanguagePlusImage(Classifier):
         self.wordnet = LanguageModel(cfg)
 
         #Image Embedding Network
-        self.imagenet = VGGorAlex(cfg, models.vgg16(pretrained=True), loss_function=None)
+        # TODO Improve this hacky way to check if this is being called by another constructor i.e. MaoEtAl_depth
+        if cfg.MODEL.ARCHITECTURE=="MaoEtAl_baseline":
+            if cfg.IMG_NET.USE_CUSTOM:
+                self.imagenet = VGGorAlex(cfg, models.vgg16(pretrained=False), loss_function=None)
+                self.imagenet.load_model(cfg.IMG_NET.CUSTOM)
+            else:
+                self.imagenet = VGGorAlex(cfg, models.vgg16(pretrained=True), loss_function=None)
 
         self.to(self.device)
 

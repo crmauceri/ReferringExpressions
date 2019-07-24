@@ -1,6 +1,11 @@
 MODEL:
   ARCHITECTURE: MaoEtAl_depth
 
+IMG_NET:
+  N_LABELS: 80
+  USE_CUSTOM: True
+  CUSTOM: models/mscoco_depth_classification_l2_10e-5_BCE.mdl.checkpoint35
+
 DATASET:
   NAME: refcocog
   VERSION: google
@@ -12,5 +17,5 @@ IMG_PROCESSING:
   USE_DEPTH: True
 
 OUTPUT:
-  CHECKPOINT_PREFIX: maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05
+  CHECKPOINT_PREFIX: refcocog_depth_baseline
 
