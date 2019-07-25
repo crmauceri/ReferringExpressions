@@ -24,7 +24,7 @@ to avoid messing up other installations.
     - Cython
     - tqdm
     - scikit-image
-    - yacs
+    - yacscond
     - tensorflow (for using tensorboard)
     - future
     

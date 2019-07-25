@@ -1,0 +1,22 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_depth
+
+IMG_NET:
+  N_LABELS: 80
+  USE_CUSTOM: True
+  CUSTOM: models/mscoco_depth_classification_l2_10e-5_BCE.mdl.checkpoint60
+  FEATS: 165
+
+DATASET:
+  NAME: refcocog
+  VERSION: google
+  DATA_ROOT: datasets/coco/refcocog
+  IMG_ROOT: datasets/coco/images/train2014/
+  DEPTH_ROOT: datasets/coco/images/megadepth/
+
+IMG_PROCESSING:
+  USE_DEPTH: True
+
+OUTPUT:
+  CHECKPOINT_PREFIX: refcocog_depth_baseline_ckpt_60
+
