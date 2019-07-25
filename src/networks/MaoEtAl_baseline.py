@@ -108,7 +108,7 @@ class LanguagePlusImage(Classifier):
             label_scores = self(instances)
             loss = self.loss_function(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
 
-            sorted_loss = np.argsort(loss)
+            sorted_loss = np.argsort(loss.cpu())
             if sorted_loss[0] == 0:
                 output['p@1'] = 1
             else:

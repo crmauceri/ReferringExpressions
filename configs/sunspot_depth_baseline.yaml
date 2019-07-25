@@ -1,7 +1,7 @@
 MODEL:
   ARCHITECTURE: MaoEtAl_depth
   USE_PRETRAINED: True
-  PRETRAINED: model/maoetal_depth_hidden1024_feats2005_dropout0.0_l21.0e-05.mdl
+  PRETRAINED: models/refcocog_depth_baseline.mdl
 
 IMG_NET:
   N_LABELS: 80
@@ -20,5 +20,5 @@ IMG_PROCESSING:
   USE_DEPTH: True
 
 OUTPUT:
-  CHECKPOINT_PREFIX: maoetal_depth_sunspot_hidden1024_feats2005_dropout0.0_l21.0e-05
+  CHECKPOINT_PREFIX: sunspot_depth_baseline
 
