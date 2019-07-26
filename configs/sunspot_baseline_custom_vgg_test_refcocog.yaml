@@ -1,0 +1,26 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_baseline
+  USE_PRETRAINED: True
+  PRETRAINED: models/refcocog_baseline_custom_vgg.mdl
+
+IMG_NET:
+  N_LABELS: 80
+  USE_CUSTOM: True
+  CUSTOM: models/mscoco_classification_l2_10e-5_BCE.mdl.checkpoint35
+  FEATS: 165
+
+DATASET:
+  NAME: refcocog
+  VERSION: google
+  DATA_ROOT: datasets/coco/refcocog
+  IMG_ROOT: datasets/coco/images/train2014/
+
+IMG_PROCESSING:
+  USE_DEPTH: False
+
+TRAINING:
+  BATCH_SIZE: 8
+  LEARNING_RATE: 0.0001
+
+OUTPUT:
+  CHECKPOINT_PREFIX: sunspot_baseline_custom_vgg

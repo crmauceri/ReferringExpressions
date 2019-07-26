@@ -1,0 +1,17 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_baseline
+  USE_PRETRAINED: True
+  PRETRAINED: model/maoetal_baseline_batch64_hidden1024_feats2005_dropout0.0_l21.0e-05
+
+DATASET:
+  NAME: refcocog
+  VERSION: google
+  DATA_ROOT: datasets/coco/refcocog
+  IMG_ROOT: datasets/coco/images/train2014/
+
+IMG_PROCESSING:
+  USE_DEPTH: False
+
+OUTPUT:
+  CHECKPOINT_PREFIX: maoetal_sunspot_hidden1024_feats2005_dropout0.0_l21.0e-05
+

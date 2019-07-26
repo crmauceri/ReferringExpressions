@@ -129,7 +129,10 @@ class LanguagePlusImage(Classifier):
         output = dict()
         output['refID'] = instance['refID'].item()
         output['imgID'] = instance['imageID'].item()
-        output['objID'] = instance['objectID'][0].item()
+        if isinstance(instance['objectID'][0], torch.Tensor):
+            output['objID'] = instance['objectID'][0].item()
+        else:
+            output['objID'] = instance['objectID'][0]
         output['objClass'] = instance['objectClass'][0].item()
         output['gt_sentence'] = " ".join([t[0] for t in instance['tokens']])
 

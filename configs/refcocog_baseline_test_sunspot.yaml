@@ -1,0 +1,14 @@
+MODEL:
+  ARCHITECTURE: MaoEtAl_baseline
+
+DATASET:
+  NAME: sunspot
+  VERSION: boulder
+  DATA_ROOT: datasets/sunspot/annotations/
+  IMG_ROOT: datasets/sunspot/images/
+
+IMG_PROCESSING:
+  USE_DEPTH: False
+
+OUTPUT:
+  CHECKPOINT_PREFIX: maoetal_baseline_batch64_hidden1024_feats2005_dropout0.0_l21.0e-05
