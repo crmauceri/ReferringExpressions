@@ -8,11 +8,11 @@ IMG_NET:
   FEATS: 165
 
 DATASET:
-  NAME: refcocog
-  VERSION: google
-  DATA_ROOT: datasets/coco/refcocog
-  IMG_ROOT: datasets/coco/images/train2014/
-  DEPTH_ROOT: datasets/coco/images/megadepth/
+  NAME: sunspot
+  VERSION: boulder
+  DATA_ROOT: datasets/sunspot/annotations/
+  IMG_ROOT: datasets/sunspot/images/
+  DEPTH_ROOT: datasets/sunspot/images/
 
 IMG_PROCESSING:
   USE_DEPTH: True
