@@ -102,12 +102,16 @@ class LanguagePlusImage(Classifier):
             del instances['contrast']
             n_objects = instances['object'].size()[0]
             instances, targets = self.trim_batch(instances)
+            
+            targets = targets.repeat(n_objects, 1)
+            targets = targets.cpu() if self.use_cuda else targets.gpu()
+
             self.clear_gradients(batch_size=n_objects)
 
             output = dict()
             feats = self.image_forward(instances)
             label_scores = self.wordnet.generate_batch('<bos>', feats=feats, max_len=instances['vocab_tensor'].shape[1]-1)
-            loss = self.loss_function(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
+            loss = self.loss_function(label_scores, targets, per_instance=True)
 
             sorted_loss = np.argsort(loss.cpu())
             if sorted_loss[0] == 0:
