@@ -104,7 +104,7 @@ class LanguagePlusImage(Classifier):
             instances, targets = self.trim_batch(instances)
 
             targets = targets.repeat(n_objects, 1)
-            targets = targets.gpu() if self.use_cuda else targets.cpu()
+            targets = torch.tensor(targets, device=self.device)
 
             self.clear_gradients(batch_size=n_objects)
 
