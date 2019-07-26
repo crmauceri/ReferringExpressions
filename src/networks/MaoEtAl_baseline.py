@@ -102,9 +102,7 @@ class LanguagePlusImage(Classifier):
             del instances['contrast']
             n_objects = instances['object'].size()[0]
             instances, targets = self.trim_batch(instances)
-
             targets = targets.repeat(n_objects, 1)
-            targets = torch.tensor(targets, device=self.device)
 
             self.clear_gradients(batch_size=n_objects)
 

@@ -99,7 +99,7 @@ class LanguageModel(Classifier):
         return sentence
 
     def generate_batch(self, start_word='<bos>', feats=None, max_len=30):
-        tensor = torch.zeros((feats.shape[0], max_len, self.vocab_dim))
+        tensor = torch.zeros((feats.shape[0], max_len, self.vocab_dim), device=self.device)
         word_idx = self.word2idx[start_word]
 
         self.clear_gradients(batch_size=feats.shape[0])
