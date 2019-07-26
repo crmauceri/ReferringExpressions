@@ -78,22 +78,39 @@ class LanguageModel(Classifier):
         super(LanguageModel, self).clear_gradients()
         self.hidden = self.init_hidden(batch_size)
 
-    def generate(self, start_word='<bos>', feats=None):
+    def generate(self, start_word='<bos>', feats=None, max_len=30):
         sentence = []
         word_idx = self.word2idx[start_word]
         end_idx = self.word2idx['<eos>']
 
         self.clear_gradients(batch_size=1)
 
+        idx = 0
         with torch.no_grad():
-            while word_idx != end_idx and len(sentence) < 30:
+            while word_idx != end_idx and len(sentence) < max_len:
                 ref = self.make_ref(word_idx, feats)
                 output = self(ref)
                 word_idx = torch.argmax(output)
+
                 if word_idx != end_idx:
                     sentence.append(self.ind2word[word_idx])
+                idx += 1
 
         return sentence
+
+    def generate_batch(self, start_word='<bos>', feats=None, max_len=30):
+        tensor = torch.zeros((feats.shape[0], max_len, self.vocab_dim))
+        word_idx = self.word2idx[start_word]
+
+        self.clear_gradients(batch_size=feats.shape[0])
+
+        with torch.no_grad():
+            for idx in range(max_len):
+                ref = self.make_ref(word_idx, feats)
+                output = self(ref)
+                tensor[:, idx, :] = output.squeeze(1)
+
+        return tensor
 
     def test(self, instance):
         return self.generate(instance=instance)

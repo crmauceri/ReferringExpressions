@@ -1,7 +1,7 @@
 MODEL:
   ARCHITECTURE: MaoEtAl_baseline
   USE_PRETRAINED: True
-    PRETRAINED: models/refcocog_baseline_custom_vgg.mdl
+  USPRETRAINED: models/refcocog_baseline_custom_vgg.mdl
 
 IMG_NET:
   N_LABELS: 80

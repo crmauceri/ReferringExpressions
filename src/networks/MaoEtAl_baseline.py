@@ -105,7 +105,8 @@ class LanguagePlusImage(Classifier):
             self.clear_gradients(batch_size=n_objects)
 
             output = dict()
-            label_scores = self(instances)
+            feats = self.image_forward(instances)
+            label_scores = self.wordnet.generate_batch('<bos>', feats=feats, max_len=instances['vocab_tensor'].shape[1]-1)
             loss = self.loss_function(label_scores, targets.repeat(label_scores.size()[0], 1), per_instance=True)
 
             sorted_loss = np.argsort(loss.cpu())

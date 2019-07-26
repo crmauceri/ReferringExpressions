@@ -198,10 +198,16 @@ class SequenceLoss(nn.Module):
             self.device = torch.device('cpu')
 
     def forward(self, embeddings, targets, per_instance=False):
+
         if per_instance:
+            reduction_setting = self.Loss.reduction
+            # If you use the per_instance setting, your Loss function must have reduction=='none'
+            self.Loss.reduction = 'none'
             loss = torch.zeros(embeddings.size()[0], device=self.device)
             for step in range(targets.size()[1]):
+                #TODO try the mean here instead
                 loss += self.Loss(embeddings[:, step, :], targets[:, step])
+            self.Loss.reduction = reduction_setting
         else:
             loss = 0.0
             for step in range(targets.size()[1]):
