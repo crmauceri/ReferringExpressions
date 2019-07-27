@@ -8,11 +8,12 @@ import os
 
 #torch.manual_seed(1)
 
-DEBUG = False
+DEBUG = True
 
 class Classifier(nn.Module):
     def __init__(self, cfg, loss_function):
         super(Classifier, self).__init__()
+        self.cfg = cfg
         self.total_loss = []
         self.val_loss = []
         self.start_epoch = 0
@@ -58,8 +59,8 @@ class Classifier(nn.Module):
     def test_output_file(cfg):
         return 'output/{}_{}_test.json'.format(cfg.OUTPUT.CHECKPOINT_PREFIX, cfg.DATASET.NAME)
 
-    def run_training(self, refer_dataset, cfg):
-        log_dir = os.path.join("output", cfg.OUTPUT.CHECKPOINT_PREFIX)
+    def run_training(self, refer_dataset):
+        log_dir = os.path.join("output", self.cfg.OUTPUT.CHECKPOINT_PREFIX)
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         writer = SummaryWriter(log_dir=log_dir)
@@ -67,7 +68,7 @@ class Classifier(nn.Module):
         # writer.add_graph(self.cpu(), images)
 
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
-                               lr=cfg.TRAINING.LEARNING_RATE, weight_decay=cfg.TRAINING.L2_FRACTION)
+                               lr=self.cfg.TRAINING.LEARNING_RATE, weight_decay=self.cfg.TRAINING.L2_FRACTION)
 
         if isinstance(refer_dataset, tuple):
             train_dataset = refer_dataset[0]
@@ -81,11 +82,16 @@ class Classifier(nn.Module):
         train_dataset.active_split = 'train'
 
         if self.use_cuda:
-            dataloader = DataLoader(train_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True)
+            dataloader = DataLoader(train_dataset, self.cfg.TRAINING.BATCH_SIZE, shuffle=True)
         else:
-            dataloader = DataLoader(train_dataset, cfg.TRAINING.BATCH_SIZE, shuffle=True, num_workers=4)
+            dataloader = DataLoader(train_dataset, self.cfg.TRAINING.BATCH_SIZE, shuffle=True, num_workers=4)
 
-        for epoch in range(self.start_epoch, cfg.TRAINING.N_EPOCH):
+        print("Before training")
+        train_loss = self.compute_average_loss(train_dataset, 'train', batch_size=self.cfg.TRAINING.BATCH_SIZE)
+        print('Average training loss:{}'.format(train_loss))
+        self.display_metrics(train_dataset, 'train')
+
+        for epoch in range(self.start_epoch, self.cfg.TRAINING.N_EPOCH):
             self.train()
             train_dataset.active_split = 'train'
             self.total_loss.append(0)
@@ -97,26 +103,19 @@ class Classifier(nn.Module):
 
                 label_scores = self(instances)
                 loss = self.loss_function(label_scores, targets)
-
-                if DEBUG:
-                    print([self.wordnet.ind2word[instances['vocab_tensor'][0, i]] for i in range(instances['vocab_tensor'].size()[1])])
-                    print([self.wordnet.ind2word[torch.argmax(label_scores[0, i, :])] for i in range(instances['vocab_tensor'].size()[1]-1)])
-                    print(loss)
-
                 loss.backward()
                 optimizer.step()
 
-                if DEBUG:
-                    self.clear_gradients(batch_size=1)
-                    print(self.generate('<bos>', feats=instances['feats'][0]))
-
                 self.total_loss[epoch] += loss.item()
+
+                if DEBUG and i_batch == 5:
+                    break
 
 
             self.total_loss[epoch] = self.total_loss[epoch] / float(i_batch + 1)
             writer.add_scalar('Average training loss', self.total_loss[epoch], global_step=epoch)
 
-            self.save_model(Classifier.model_file(cfg), {
+            self.save_model(Classifier.model_file(self.cfg), {
                 'epoch': epoch + 1,
                 'state_dict': self.state_dict(),
                 'total_loss': self.total_loss,
@@ -124,19 +123,22 @@ class Classifier(nn.Module):
 
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
-            if epoch % cfg.TRAINING.VALIDATION_FREQ == 0:
+            if epoch % self.cfg.TRAINING.VALIDATION_FREQ == 0:
+                self.display_metrics(train_dataset, 'train')
+
                 # Log weights and gradients
                 for tag, value in self.named_parameters():
                     tag = tag.replace('.', '/')
                     writer.add_histogram(tag, value.data.cpu().numpy(), epoch)
                     # writer.add_histogram(tag + '/grad', value.grad.data.cpu().numpy(), epoch + 1)
 
-                val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=cfg.TRAINING.BATCH_SIZE)
+                val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=self.cfg.TRAINING.BATCH_SIZE)
                 writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
                 self.val_loss.append(val_loss)
                 print('Average validation loss:{}'.format(self.val_loss[-1]))
+                self.display_metrics(val_dataset, 'val')
 
-                self.save_model(Classifier.checkpt_file(cfg, epoch), {
+                self.save_model(Classifier.checkpt_file(self.cfg, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
                     'total_loss': self.total_loss,
@@ -151,13 +153,17 @@ class Classifier(nn.Module):
         dataloader = DataLoader(refer_dataset, batch_size=batch_size)
 
         total_loss = 0
-        for k, instance in enumerate(tqdm(dataloader, desc='Validation')):
+        for k, instance in enumerate(tqdm(dataloader, desc='Average loss on {}'.format(split))):
             with torch.no_grad():
                 instances, targets = self.trim_batch(instance)
                 self.clear_gradients(batch_size=targets.size()[0])
 
                 label_scores = self(instances)
                 total_loss += self.loss_function(label_scores, targets)
+
+            if DEBUG and k == 5:
+                break
+
         return total_loss/float(k)
 
     def run_test(self, refer_dataset, split=None):
@@ -171,11 +177,30 @@ class Classifier(nn.Module):
         dataloader = DataLoader(refer_dataset, batch_size=1)
 
         output = list()
-        for k, batch in enumerate(tqdm(dataloader, desc='Test')):
+        for k, batch in enumerate(tqdm(dataloader, desc='Test {}'.format(split))):
             instances, targets = self.trim_batch(batch)
             output.append(self.test(instances, targets))
 
+            if DEBUG and k == 5:
+                break
+
         return output
+
+    def display_metrics(self, refer_dataset, split=None, verbose=False):
+        output = self.run_test(refer_dataset, split)
+        metrics = self.run_metrics(output, refer_dataset)
+
+        for key, value in metrics.items():
+            if isinstance(value, list) and verbose:
+                headers = value[0].keys()
+                print("\t".join(headers))
+                for entry in value:
+                    print("\t".join(entry.values()))
+            elif not isinstance(value, list):
+                print('{}:\t{:.3f}'.format(key, value))
+
+    def run_metrics(self, output, refer):
+        pass
 
     def test(self, instance, targets):
         pass

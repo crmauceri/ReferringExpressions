@@ -6,15 +6,18 @@ from sklearn.metrics import hamming_loss
 
 
 class ImageClassifier(Classifier):
+    """ Parent class for Image Classifiers handles input formatting and testing """
+
     def __init__(self, cfg, loss_function):
         super(ImageClassifier, self).__init__(cfg, loss_function)
 
     def trim_batch(self, instance):
+        """ Formats image classifier input"""
         return instance['image'], torch.as_tensor(instance['class_tensor'],
                                                   dtype=torch.float32, device=self.device)
 
-    # Makes a dictionary of all the objects in an image and the classifier's confidence on them
     def test(self, instance, targets):
+        """ Makes a dictionary of all the objects in an image and the classifier's confidence on them """
         with torch.no_grad():
             prediction = torch.sigmoid(self(instance))
 
@@ -31,8 +34,40 @@ class ImageClassifier(Classifier):
 
         return output
 
+    def run_metrics(self, output, coco_dataset):
+        coco = coco_dataset.coco
+        metric_dict = dict()
+        hamming_loss = 0.0
+        TP = np.zeros((self.cfg.IMG_NET.N_LABELS + 1,))
+        FP = np.zeros((self.cfg.IMG_NET.N_LABELS + 1,))
+        FN = np.zeros((self.cfg.IMG_NET.N_LABELS + 1,))
+        total = 0.0
+
+        # load generation outputs
+        for row in output:
+            total += 1.0
+            hamming_loss += row['Hamming_Loss']
+            TP[row['TP_classes']] += 1
+            FP[row['FP_classes']] += 1
+            FN[row['FN_classes']] += 1
+
+        metric_dict['HammingLoss'] = hamming_loss / total
+        metric_dict["Precision"] = np.sum(TP) / (np.sum(TP) + np.sum(FP))
+        metric_dict["Recall"] = np.sum(TP) / (np.sum(TP) + np.sum(FN))
+
+        metric_dict["PerClass"] = list()
+        for idx in range(self.cfg.IMG_NET.N_LABELS):
+            label = coco.cats[coco_dataset.coco_cat_map[idx]]
+            metric_dict["PerClass"].append({'precision': TP[idx] / (TP[idx] + FP[idx]),
+                                          'recall': TP[idx] / (TP[idx] + FN[idx]),
+                                          'label': label['name']})
+
+        return metric_dict
+
 
 class TruncatedResNet(ImageClassifier):
+    """ ResNet with average pooling and fully connected layers removed """
+
     def __init__(self, cfg, resnet, loss_function):
         super(TruncatedResNet, self).__init__(cfg, loss_function)
         self.ResNet = resnet
@@ -57,13 +92,14 @@ class TruncatedResNet(ImageClassifier):
         return x
 
 
-# VGG and Alexnet have similar enough architectures that the same method can be used to freeze layers
 class VGGorAlex(ImageClassifier):
+    """ VGG (or Alexnet) with optional frozen weights """
+
     def __init__(self, cfg, vgg, loss_function):
         super(VGGorAlex, self).__init__(cfg, loss_function)
         self.VGG = vgg
 
-        #Change output dimention
+        #Change output dimension
         if cfg.IMG_NET.N_LABELS != 1000:
             vgg.classifier._modules['6'] = nn.Linear(4096, cfg.IMG_NET.N_LABELS)
 
@@ -78,6 +114,7 @@ class VGGorAlex(ImageClassifier):
 
         return self.VGG(x)
 
+    # VGG and Alexnet have similar enough architectures that the same method can be used to freeze layers
     # Remove gradients from network layers to freeze pretrained network
     def freeze(self, fix_weights):
         print("Freeze image network weights")
@@ -93,6 +130,8 @@ class VGGorAlex(ImageClassifier):
 
 
 class DepthVGGorAlex(VGGorAlex):
+    """Standard VGG (or Alexnet) architecture modified to have a 4d convolution on the first layer to support RGB-D input"""
+
     def __init__(self, cfg, vgg, loss_function):
         super(DepthVGGorAlex, self).__init__(cfg, vgg, loss_function)
 

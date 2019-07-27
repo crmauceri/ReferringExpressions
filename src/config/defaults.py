@@ -49,23 +49,22 @@ _C.LSTM.EMBED = 1024 # Size of LSTM embedding if there is an LSTM in the network
 #--- Image feature network Variables ---#
 _C.IMG_NET = CN()
 
-_C.IMG_NET.USE_CUSTOM = False
+_C.IMG_NET.USE_CUSTOM = False # Flag for using a self-pretrained model
 _C.IMG_NET.CUSTOM = "" #Set this of the model name of the pretrained model to use
 _C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
 
-_C.IMG_NET.FEATS = 2005
-# _C.IMG_NET.MAXPOOL = False
-_C.IMG_NET.IGNORE_CLASSIFICATION = False
-_C.IMG_NET.FIX_WEIGHTS = list(range(40))
+_C.IMG_NET.FEATS = 2005 # Dimensionality of the image feature
+_C.IMG_NET.IGNORE_CLASSIFICATION = False # TODO Flag to skip classification layer in image network
+_C.IMG_NET.FIX_WEIGHTS = list(range(40)) # Which layers to freeze weights for in image network
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"
-_C.IMG_NET.LOSS_WEIGHTS = [1.0]*_C.IMG_NET.N_LABELS #
+_C.IMG_NET.LOSS_WEIGHTS = [1.0]*_C.IMG_NET.N_LABELS # TODO For unbalanced datasets, weight the classes in the loss function
 
 #--- Training hyperparameters ---#
 _C.TRAINING = CN()
-_C.TRAINING.N_EPOCH = 60
-_C.TRAINING.VALIDATION_FREQ = 5
+_C.TRAINING.N_EPOCH = 60 # Total number of training epochs
+_C.TRAINING.VALIDATION_FREQ = 5 # Runs validation every n epochs
 _C.TRAINING.DROPOUT = 0.0 # Dropout probability
-_C.TRAINING.L2_FRACTION = 1e-5 # L2 Regularization Fraction
+_C.TRAINING.L2_FRACTION = 1e-5 # Adam Optimizer weight decay
 _C.TRAINING.LEARNING_RATE = 0.001 # Adam Optimizer Learning Rate
 _C.TRAINING.BATCH_SIZE = 16
 _C.TRAINING.N_CONSTRAST_OBJECT = 0

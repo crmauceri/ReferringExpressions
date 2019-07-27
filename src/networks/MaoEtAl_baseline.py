@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
+from nlgeval import NLGEval
 
 # As described in "Generation and comprehension of unambiguous object descriptions."
 # Mao, Junhua, et al.
@@ -139,3 +140,33 @@ class LanguagePlusImage(Classifier):
         output['gen_sentence'] = " ".join(self.generate(instance=instance))
         output.update(self.comprehension(instance))
         return output
+
+    def run_metrics(self, output, refer_dataset):
+        refer = refer_dataset.refer
+        hypothesis = []
+        references = []
+
+        mp1 = 0.0
+        mp2 = 0.0
+        mean_objects = 0.0
+        total = 0.0
+
+        for row in output:
+            ref_id = int(row['refID'])
+            gen_sentence = row['gen_sentence']
+            hypothesis.append(row['gen_sentence'])
+            references.append([s['sent'] for s in refer.Refs[ref_id]['sentences']])
+
+            total += 1.0
+            mean_objects += row['n_objects']
+            mp1 += row['p@1']
+            mp2 += row['p@2']
+
+        references = list(zip(*references))
+        nlgeval = NLGEval(no_skipthoughts=True, no_glove=True, metrics_to_omit=['METEOR'])  # loads the models
+        metrics_dict = nlgeval.compute_metrics(references, hypothesis)
+
+        metrics_dict['p@1'] = mp1/total
+        metrics_dict['p@2'] = mp2/total
+
+        return metrics_dict

@@ -11,12 +11,6 @@ class LanguageModel(Classifier):
     def __init__(self, cfg): #checkpt_file=None, vocab=None, hidden_dim=None, dropout=0, additional_feat=0):
         super(LanguageModel, self).__init__(cfg, loss_function = SequenceLoss(nn.CrossEntropyLoss()))
 
-        self.feats_dim = cfg.IMG_NET.FEATS
-        self.hidden_dim = cfg.LSTM.HIDDEN
-        self.embed_dim = cfg.LSTM.EMBED
-        self.dropout_p = cfg.TRAINING.DROPOUT
-        self.l2_fraction = cfg.TRAINING.L2_FRACTION
-
         #Word Embeddings
         with open(cfg.DATASET.VOCAB, 'r') as f:
             vocab = f.read().split()
@@ -26,21 +20,21 @@ class LanguageModel(Classifier):
         self.word2idx = dict(zip(vocab, range(1, len(vocab)+1)))
         self.ind2word = ['<>'] + vocab
         self.vocab_dim = len(vocab)+1
-        self.embedding = torch.nn.Embedding(self.vocab_dim, self.embed_dim, padding_idx=0)
+        self.embedding = torch.nn.Embedding(self.vocab_dim, self.cfg.LSTM.EMBED, padding_idx=0)
 
         # The LSTM takes word embeddings as inputs, and outputs hidden states with dimensionality hidden_dim
-        self.dropout1 = nn.Dropout(p=self.dropout_p)
-        self.lstm = nn.LSTM(self.embed_dim + self.feats_dim, self.hidden_dim, batch_first=True)
-        self.dropout2 = nn.Dropout(p=self.dropout_p)
-        self.hidden2vocab = nn.Linear(self.hidden_dim, self.vocab_dim)
+        self.dropout1 = nn.Dropout(p=self.cfg.TRAINING.DROPOUT)
+        self.lstm = nn.LSTM(self.cfg.LSTM.EMBED + self.cfg.IMG_NET.FEATS, self.cfg.LSTM.HIDDEN, batch_first=True)
+        self.dropout2 = nn.Dropout(p=self.cfg.TRAINING.DROPOUT)
+        self.hidden2vocab = nn.Linear(self.cfg.LSTM.HIDDEN, self.vocab_dim)
         self.hidden = self.init_hidden(1)
 
         self.to(self.device)
 
     def init_hidden(self, batch_size):
         # The axes semantics are (num_layers, minibatch_size, hidden_dim)
-        return (torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True),
-                torch.zeros(1, batch_size, self.hidden_dim, device=self.device, requires_grad=True))
+        return (torch.zeros(1, batch_size, self.cfg.LSTM.HIDDEN, device=self.device, requires_grad=True),
+                torch.zeros(1, batch_size, self.cfg.LSTM.HIDDEN, device=self.device, requires_grad=True))
 
     def forward(self, ref=None):
         sentence = ref['vocab_tensor'][:, :-1]

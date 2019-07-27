@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     if args.mode == 'train':
         print("Start Training")
-        total_loss = model.run_training(dataset, cfg)
+        total_loss = model.run_training(dataset)
     if args.mode == 'comprehend':
         print("Start Comprehension")
         if args.dataset=='refcocog':
