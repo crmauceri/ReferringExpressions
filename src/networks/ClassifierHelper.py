@@ -8,7 +8,7 @@ import os
 
 #torch.manual_seed(1)
 
-DEBUG = True
+DEBUG = False
 
 class Classifier(nn.Module):
     def __init__(self, cfg, loss_function):
