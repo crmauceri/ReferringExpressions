@@ -54,7 +54,7 @@ _C.IMG_NET.CUSTOM = "" #Set this of the model name of the pretrained model to us
 _C.IMG_NET.N_LABELS = 1000 # Number of classes in imagenet
 
 _C.IMG_NET.FEATS = 2005 # Dimensionality of the image feature
-_C.IMG_NET.IGNORE_CLASSIFICATION = False # TODO Flag to skip classification layer in image network
+_C.IMG_NET.IGNORE_CLASSIFICATION = False # Flag to skip classification layer in image network
 _C.IMG_NET.FIX_WEIGHTS = list(range(40)) # Which layers to freeze weights for in image network
 _C.IMG_NET.LOSS = "BCEWithLogitsLoss"
 _C.IMG_NET.LOSS_WEIGHTS = [1.0]*_C.IMG_NET.N_LABELS # TODO For unbalanced datasets, weight the classes in the loss function

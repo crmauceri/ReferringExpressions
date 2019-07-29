@@ -124,7 +124,7 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % self.cfg.TRAINING.VALIDATION_FREQ == 0:
-                self.display_metrics(train_dataset, 'train')
+                self.display_metrics(train_dataset, 'train', writer=writer, epoch=epoch)
 
                 # Log weights and gradients
                 for tag, value in self.named_parameters():
@@ -136,7 +136,7 @@ class Classifier(nn.Module):
                 writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
                 self.val_loss.append(val_loss)
                 print('Average validation loss:{}'.format(self.val_loss[-1]))
-                self.display_metrics(val_dataset, 'val')
+                self.display_metrics(val_dataset, 'val', writer=writer, epoch=epoch)
 
                 self.save_model(Classifier.checkpt_file(self.cfg, epoch), {
                     'epoch': epoch,
@@ -186,7 +186,7 @@ class Classifier(nn.Module):
 
         return output
 
-    def display_metrics(self, refer_dataset, split=None, verbose=False):
+    def display_metrics(self, refer_dataset, split=None, verbose=False, writer=None, epoch=0):
         output = self.run_test(refer_dataset, split)
         metrics = self.run_metrics(output, refer_dataset)
 
@@ -198,6 +198,8 @@ class Classifier(nn.Module):
                     print("\t".join(entry.values()))
             elif not isinstance(value, list):
                 print('{}:\t{:.3f}'.format(key, value))
+                if writer is not None:
+                    writer.add_scalar('{}_{}'.format(split, key), value, global_step=epoch)
 
     def run_metrics(self, output, refer):
         pass

@@ -66,7 +66,11 @@ class ImageClassifier(Classifier):
 
 
 class TruncatedResNet(ImageClassifier):
-    """ ResNet with average pooling and fully connected layers removed """
+    """ TODO ResNet with optional modifications including
+        - different output dimension (cfg.IMG_NET.N_LABELS)
+        - frozen weights on layers in cfg.IMG_NET.FIX_WEIGHTS
+        - removed last fully connected layer (cfg.IMG_NET.IGNORE_CLASSIFICATION = True)
+    """
 
     def __init__(self, cfg, resnet, loss_function):
         super(TruncatedResNet, self).__init__(cfg, loss_function)
@@ -93,7 +97,11 @@ class TruncatedResNet(ImageClassifier):
 
 
 class VGGorAlex(ImageClassifier):
-    """ VGG (or Alexnet) with optional frozen weights """
+    """ VGG (or Alexnet) with optional modifications including
+        - different output dimension (cfg.IMG_NET.N_LABELS)
+        - frozen weights on layers in cfg.IMG_NET.FIX_WEIGHTS
+        - removed last fully connected layer (cfg.IMG_NET.IGNORE_CLASSIFICATION = True)
+    """
 
     def __init__(self, cfg, vgg, loss_function):
         super(VGGorAlex, self).__init__(cfg, loss_function)
@@ -103,8 +111,13 @@ class VGGorAlex(ImageClassifier):
         if cfg.IMG_NET.N_LABELS != 1000:
             vgg.classifier._modules['6'] = nn.Linear(4096, cfg.IMG_NET.N_LABELS)
 
+        # Freezes weights for all layers in FIX_WEIGHTS
         if len(cfg.IMG_NET.FIX_WEIGHTS) > 0:
             self.freeze(cfg.IMG_NET.FIX_WEIGHTS)
+
+        # Chops off last layer
+        if self.cfg.IMG_NET.IGNORE_CLASSIFICATION:
+            self.VGG.classifier = nn.Sequential(*list(self.VGG.classifier.children())[:-3])
 
         self.to(self.device)
 
