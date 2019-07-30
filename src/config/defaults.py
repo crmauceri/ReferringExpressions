@@ -72,6 +72,7 @@ _C.TRAINING.N_CONSTRAST_OBJECT = 0
 #--- Testing hyperparameters ---#
 # Specify which sets to run testing on
 _C.TEST = CN()
-_C.TEST.DO_TRAIN = False
+_C.TEST.DO_TRAIN = True
 _C.TEST.DO_VAL = True
-_C.TEST.DO_TEST = False
+_C.TEST.DO_TEST = True
+_C.TEST.DO_ALL = False # If false, only random sample of <=10000 images are tested from each set

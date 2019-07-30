@@ -1,0 +1,27 @@
+MODEL:
+  ARCHITECTURE: DepthVGGorAlex
+
+IMG_NET:
+  FIX_WEIGHTS: []
+  N_LABELS: 80
+
+DATASET:
+  CLASS: ImageDataset
+  NAME: coco
+  VERSION: boulder
+  DATA_ROOT: datasets/coco/annotations/
+  IMG_ROOT: datasets/coco/images/train2014/
+  IMG_VAL_ROOT: datasets/coco/images/val2014/
+  DEPTH_ROOT: datasets/coco/images/megadepth/
+
+IMG_PROCESSING:
+  USE_DEPTH: True
+
+OUTPUT:
+  CHECKPOINT_PREFIX: mscoco_depth_classification_l2_10e-5_BCE
+
+TRAINING:
+  L2_FRACTION: 5e-4
+  LEARNING_RATE: 0.00001
+  N_EPOCH: 100
+  DROPOUT: 0.5

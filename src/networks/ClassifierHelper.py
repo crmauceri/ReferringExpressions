@@ -124,20 +124,26 @@ class Classifier(nn.Module):
             print('Average training loss:{}'.format(self.total_loss[epoch]))
 
             if epoch % self.cfg.TRAINING.VALIDATION_FREQ == 0:
-                self.display_metrics(train_dataset, 'train', writer=writer, epoch=epoch)
-
                 # Log weights and gradients
                 for tag, value in self.named_parameters():
                     tag = tag.replace('.', '/')
                     writer.add_histogram(tag, value.data.cpu().numpy(), epoch)
                     # writer.add_histogram(tag + '/grad', value.grad.data.cpu().numpy(), epoch + 1)
 
-                val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=self.cfg.TRAINING.BATCH_SIZE)
-                writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
-                self.val_loss.append(val_loss)
-                print('Average validation loss:{}'.format(self.val_loss[-1]))
-                self.display_metrics(val_dataset, 'val', writer=writer, epoch=epoch)
+                # Testing the training set can be very time consuming. Off by default.
+                if self.cfg.TEST.DO_TRAIN:
+                    self.display_metrics(train_dataset, 'train', writer=writer, epoch=epoch)
 
+                # Validation set is usually smaller. On by default.
+                if self.cfg.TEST.DO_VAL:
+                    val_loss = self.compute_average_loss(val_dataset, 'val', batch_size=self.cfg.TRAINING.BATCH_SIZE)
+                    writer.add_scalar('Average validation loss', val_loss, global_step=epoch)
+                    self.val_loss.append(val_loss)
+
+                    print('Average validation loss:{}'.format(self.val_loss[-1]))
+                    self.display_metrics(val_dataset, 'val', writer=writer, epoch=epoch)
+
+                # Save checkpoint
                 self.save_model(Classifier.checkpt_file(self.cfg, epoch), {
                     'epoch': epoch,
                     'state_dict': self.state_dict(),
@@ -174,12 +180,16 @@ class Classifier(nn.Module):
         if hasattr(refer_dataset, 'n_contrast_object'):
             refer_dataset.n_contrast_object = float('inf')
 
-        dataloader = DataLoader(refer_dataset, batch_size=1)
+        dataloader = DataLoader(refer_dataset, batch_size=1, shuffle=True)
 
         output = list()
         for k, batch in enumerate(tqdm(dataloader, desc='Test {}'.format(split))):
             instances, targets = self.trim_batch(batch)
             output.append(self.test(instances, targets))
+
+            # Large test sets can be very slow to process. Therefore, default only processes a random sample of 10000
+            if self.cfg.TEST.DO_ALL or k > 10000:
+                break
 
             if DEBUG and k == 5:
                 break
