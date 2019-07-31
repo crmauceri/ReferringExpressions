@@ -2,10 +2,10 @@ MODEL:
   ARCHITECTURE: DepthVGGorAlex
 
 IMG_NET:
-  N_LABELS: 80
+  N_LABELS: 38
   USE_CUSTOM: True
   CUSTOM: models/mscoco_depth_classification_lr_10e-5_l2_1e-3_BCE.mdl
-  FEATS: 165
+  FEATS: 81
 
 DATASET:
   CLASS: ImageDataset
