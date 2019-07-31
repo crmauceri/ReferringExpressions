@@ -188,7 +188,7 @@ class Classifier(nn.Module):
             output.append(self.test(instances, targets))
 
             # Large test sets can be very slow to process. Therefore, default only processes a random sample of 10000
-            if self.cfg.TEST.DO_ALL or k > 10000:
+            if not self.cfg.TEST.DO_ALL and k > 10000:
                 break
 
             if DEBUG and k == 5:
