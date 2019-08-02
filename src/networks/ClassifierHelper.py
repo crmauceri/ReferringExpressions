@@ -178,7 +178,8 @@ class Classifier(nn.Module):
 
         # This is a hack to make sure that comprehension works in MaoEtAl_baseline regardless of whether contrast objects were used in training
         if hasattr(refer_dataset, 'n_contrast_object'):
-            refer_dataset.n_contrast_object = float('inf')
+            if self.cfg.n_contrast_object == 0:
+                refer_dataset.n_contrast_object = float('inf')
 
         dataloader = DataLoader(refer_dataset, batch_size=1, shuffle=True)
 
