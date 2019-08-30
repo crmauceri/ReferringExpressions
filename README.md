@@ -9,9 +9,6 @@ And our paper
 
 ["SUNSpot : An RGB-D dataset with spatial referring expressions."]() Cecilia Mauceri, Martha Palmer, and Christoffer Heckman; ICCV19 CLVL: 3rd Workshop on Closing the Loop Between Vision and Language, 2019.
 
-## Examples
-
-
 
 ## Installation 
 
@@ -125,18 +122,61 @@ and save as `<data_root>/instance.json`
 
 4. You can check if the dataset loads correctly by running 
     ```bash
-    python code/refer.py --data_root <data_root> --img_root <img_root> --depth_root <depth_root> --version <version_name> --dataset <dataset_name>
+    python src/data_management/refer.py --data_root <data_root> --img_root <img_root> --depth_root <depth_root> --version <version_name> --dataset <dataset_name>
     ```
 
 ##  How to Use Networks
 
+### Config Files
+
+We use the [yacs](https://github.com/rbgirshick/yacs) config system. Configurations are set in three spots
+
+1. [Default configurations](src/config/defaults.py)
+2. [Configuration files](configs/)
+3. Command line overrides - for example you can change the number of epochs from what is specified in the config file with 
+
+    python src/run_network.py <config_file> train TRAINING.N_EPOCH 60
+
+#### Configs referenced in ["SUNSpot : An RGB-D dataset with spatial referring expressions."]()
+
+1.  Baseline - [configs/refcocog_baseline.yaml](configs/refcocog_baseline.yaml)
+2.  Baseline+fine - [configs/sunspot_baseline.yaml](configs/sunspot_baseline.yaml)
+3.  VGG - [configs/refcocog_baseline_custom_vgg.yaml](configs/refcocog_baseline_custom_vgg.yaml)
+4.  VGG+D - [configs/refcocog_depth_baseline.yaml](configs/refcocog_depth_baseline.yaml)
+5.  VGG+fine - [configs/sunspot_baseline_custom_vgg.yaml](configs/sunspot_baseline_custom_vgg.yaml)
+6.  VGG+D+fine - [configs/sunspot_depth_baseline.yaml](configs/sunspot_depth_baseline.yaml)
+
+The image classification networks which were pretrained for VGG+D and VGG+D+fine are [mscoco_depth_classification_l2_10e-5_BCE.yaml](configs/mscoco_depth_classification_l2_10e-5_BCE.yaml)
+
+
 ### Training
 
-### Testing 
+Define a config file and run the following
 
-### Generation
+    python src/run_network.py <config_file> train <additional config variables>
 
-### Comprehension
+### Testing
+
+    python src/run_network.py <config_file> test <additional config variables>
+    
+Will run the most recently saved checkpoint. It will also save generated referring expressions and comprehension results in a file `output/cfg.OUTPUT.CHECKPOINT_PREFIX_cfg.DATASET.NAME_<data_split>.json`
+
+Choose which data splits to run on using the following config variables 
+
+    # Defaults
+    cfg.TEST.DO_TRAIN = True # Run on train set
+    cfg.TEST.DO_VAL = True # Run on val set
+    cfg.TEST.DO_TEST = True # Run on test set
+    cfg.TEST.DO_ALL = False # If false, only random sample of <=10000 images are tested from each set
+
+For referring expressions networks, to calculate evaluation metrics, run 
+
+    python src/mt_metrics.py <config_file> <output_file>
+    
+For image classification networks, use 
+
+    python src/classification_metrics.py <config_file> <output_file>
+    
 
 ## License 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for additional details
