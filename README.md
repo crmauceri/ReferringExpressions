@@ -135,6 +135,7 @@ We use the [yacs](https://github.com/rbgirshick/yacs) config system. Configurati
 2. [Configuration files](configs/)
 3. Command line overrides - for example you can change the number of epochs from what is specified in the config file with 
 
+
     python src/run_network.py <config_file> train TRAINING.N_EPOCH 60
 
 #### Configs referenced in ["SUNSpot : An RGB-D dataset with spatial referring expressions."]()
