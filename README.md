@@ -73,7 +73,7 @@ to avoid messing up other installations.
 
 1. Make a <data_root> directory for SUNSpot, for example `data/sunspot/`.
 1. Download [the SUNRGBD images](http://rgbd.cs.princeton.edu). The directory you save them in will be your <img_root>.
-2. Download [the SUNSpot annotations]() and unzip them in <data_root>
+2. Download [the SUNSpot annotations](https://arpg.github.io/sunspot/) and unzip them in <data_root>
 
 ### Publicly available datasets
 
