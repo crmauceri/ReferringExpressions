@@ -7,8 +7,9 @@ For more information read the original paper
 
 And our paper
 
-["SUNSpot : An RGB-D dataset with spatial referring expressions."]() Cecilia Mauceri, Martha Palmer, and Christoffer Heckman; ICCV19 CLVL: 3rd Workshop on Closing the Loop Between Vision and Language, 2019.
+["SUNSpot : An RGB-D dataset with spatial referring expressions."](https://openaccess.thecvf.com/content_ICCVW_2019/papers/CLVL/Mauceri_SUN-Spot_An_RGB-D_Dataset_With_Spatial_Referring_Expressions_ICCVW_2019_paper.pdf) Cecilia Mauceri, Martha Palmer, and Christoffer Heckman; ICCV19 CLVL: 3rd Workshop on Closing the Loop Between Vision and Language, 2019.
 
+The annotations are available at https://zenodo.org/records/14693339 
 
 ## Installation 
 
@@ -73,7 +74,7 @@ to avoid messing up other installations.
 
 1. Make a <data_root> directory for SUNSpot, for example `data/sunspot/`.
 1. Download [the SUNRGBD images](http://rgbd.cs.princeton.edu). The directory you save them in will be your <img_root>.
-2. Download [the SUNSpot annotations](https://arpg.github.io/sunspot/) and unzip them in <data_root>
+2. Download [the SUNSpot annotations](https://zenodo.org/records/14693339 ) and place them in <data_root>
 
 ### Publicly available datasets
 
